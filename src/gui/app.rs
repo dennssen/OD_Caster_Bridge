@@ -12,6 +12,7 @@ pub struct AppState {
     pub away_team_logo: Option<String>,
     pub connected_clients: usize,
     pub poll_interval_ms: u64,
+    pub broadcast_tx: tokio::sync::broadcast::Sender<GameState>,
 }
 
 pub struct OverlayProxyApp {
@@ -32,7 +33,7 @@ impl eframe::App for OverlayProxyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Ok(mut state) = self.state.try_write() {
                 if state.connected_clients > 0 {
-                    ui.add(widgets::StatusIndicator::connected("Test".to_string()));
+                    ui.add(widgets::StatusIndicator::connected(state.connected_clients.to_string()));
                 } else {
                     ui.add(widgets::StatusIndicator::disconnected());
                 }
