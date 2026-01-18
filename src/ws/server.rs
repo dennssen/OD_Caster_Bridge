@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::RwLock;
@@ -40,10 +41,8 @@ async fn handle_client(stream: TcpStream, state: Arc<RwLock<AppState>>) {
 
     {
         let s = state.read().await;
-        if let Some(game_state) = &s.game_state {
-            if let Ok(json) = serde_json::to_string(&game_state) {
-                let _ = write.send(Message::Text(Utf8Bytes::from(json))).await;
-            }
+        if let Ok(json) = serde_json::to_string(&s.game_state) {
+            let _ = write.send(Message::Text(Utf8Bytes::from(json))).await;
         }
     }
 
@@ -59,7 +58,11 @@ async fn handle_client(stream: TcpStream, state: Arc<RwLock<AppState>>) {
 
             Some(msg) = read.next() => {
                 match msg {
-                    Ok(Message::Text(text)) => {}
+                    Ok(Message::Text(text)) => {
+                        if let Ok(query) = serde_json::from_str::<HashMap<String, String>>(&text) {
+                            handle_query(&state, query).await;
+                        }
+                    }
                     Ok(Message::Close(_)) => break,
                     Ok(Message::Ping(ping)) => {
                         let _ = write.send(Message::Pong(ping)).await;
@@ -75,6 +78,22 @@ async fn handle_client(stream: TcpStream, state: Arc<RwLock<AppState>>) {
         let mut s = state.write().await;
         if s.connected_clients > 0 {
             s.connected_clients -= 1;
+        }
+    }
+}
+
+async fn handle_query(state: &Arc<RwLock<AppState>>, query: HashMap<String, String>) {
+    if let Some(action) = query.get("action") {
+        let mut s = state.write().await;
+
+        match action.as_str() {
+            "setSubscribedGamemode" => {
+                if let Some(slot_id) = query.get("slotId") {
+                    println!("Subscribing to: {}", &slot_id);
+                    s.subscribed_gamemode_slot_id = slot_id.clone();
+                }
+            }
+            _ => {}
         }
     }
 }

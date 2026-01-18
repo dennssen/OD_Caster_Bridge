@@ -71,8 +71,57 @@ pub struct Ball {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct GameState {
+pub struct GameData {
     pub players: Vec<Player>,
     pub spectators: Vec<Spectator>,
-    pub balls: Vec<Ball>
+    pub balls: Vec<Ball>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct SimpleGamemode {
+    #[serde(rename = "slotId")]
+    pub slot_id: String,
+    pub position: Vec3,
+    pub rotation: Quat,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct GamemodeTeam {
+    pub score: i8,
+    #[serde(rename = "roundsWon")]
+    pub rounds_won: i16,
+    #[serde(rename = "teamColor")]
+    pub team_color: TeamColor,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct TeamColor {
+    pub primary: Color,
+    pub secondary: Color,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct GamemodeData {
+    #[serde(rename = "slotId")]
+    pub slot_id: String,
+    #[serde(rename = "timeSeconds")]
+    pub time_seconds: f32,
+    #[serde(rename = "secondaryTimeSeconds")]
+    pub secondary_time_seconds: f32,
+    #[serde(rename = "isGameRunning")]
+    pub is_game_running: bool,
+    #[serde(rename = "totalRounds")]
+    pub total_rounds: i8,
+    #[serde(rename = "useBestOf")]
+    pub use_best_of: bool,
+    pub teams: Vec<GamemodeTeam>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct GameState {
+    #[serde(rename = "gameData")]
+    pub game_data: Option<GameData>,
+    pub gamemodes: Vec<SimpleGamemode>,
+    #[serde(rename = "selectedGamemode")]
+    pub selected_gamemode: Option<GamemodeData>
 }

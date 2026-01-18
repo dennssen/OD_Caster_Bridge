@@ -5,12 +5,16 @@ use crate::gui::widgets;
 use crate::ws::state::GameState;
 
 pub struct AppState {
-    pub game_state: Option<GameState>,
+    pub game_state: GameState,
+    pub subscribed_gamemode_slot_id: String,
+
     pub home_team_name: String,
     pub away_team_name: String,
     pub home_team_logo: Option<String>,
     pub away_team_logo: Option<String>,
+
     pub connected_clients: usize,
+    pub spectator_connection: bool,
     pub poll_interval_ms: u64,
     pub broadcast_tx: tokio::sync::broadcast::Sender<GameState>,
 }
@@ -30,13 +34,23 @@ impl OverlayProxyApp {
 impl eframe::App for OverlayProxyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.set_pixels_per_point(1.5);
+
         egui::CentralPanel::default().show(ctx, |ui| {
-            if let Ok(mut state) = self.state.try_write() {
-                if state.connected_clients > 0 {
-                    ui.add(widgets::StatusIndicator::connected(state.connected_clients.to_string()));
-                } else {
-                    ui.add(widgets::StatusIndicator::disconnected());
-                }
+            let state = self.state.blocking_write();
+
+            if state.connected_clients > 0 && state.spectator_connection {
+                ui.add(widgets::StatusIndicator::connected(state.connected_clients.to_string()));
+            } else if state.connected_clients == 0 && !state.spectator_connection {
+                ui.add(widgets::StatusIndicator::disconnected());
+            } else {
+                ui.add(widgets::StatusIndicator::connecting());
+                ui.label(
+                    if state.connected_clients == 0 {
+                        "No overlays active."
+                    } else {
+                        "Missing spectator API. Open the spectator client and join a server."
+                    }
+                );
             }
         });
     }
