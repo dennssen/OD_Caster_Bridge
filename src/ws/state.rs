@@ -86,10 +86,20 @@ pub struct SimpleGamemode {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+pub struct SimplePlayer {
+    #[serde(rename = "playerId")]
+    pub player_id: u16,
+    #[serde(rename = "playerName")]
+    pub player_name: String,
+    position: Vec3,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GamemodeTeam {
     pub score: i8,
     #[serde(rename = "roundsWon")]
     pub rounds_won: i16,
+    pub players: Vec<SimplePlayer>,
     #[serde(rename = "teamColor")]
     pub team_color: TeamColor,
 }
