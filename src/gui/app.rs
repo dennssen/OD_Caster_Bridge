@@ -7,6 +7,7 @@ use crate::ws::state::GameState;
 pub struct AppState {
     pub game_state: GameState,
     pub subscribed_gamemode_slot_id: String,
+    pub subscribed_camera_id: String,
 
     pub home_team_name: String,
     pub away_team_name: String,
@@ -34,6 +35,7 @@ impl OverlayProxyApp {
 impl eframe::App for OverlayProxyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.set_pixels_per_point(1.5);
+        ctx.request_repaint();
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let state = self.state.blocking_write();

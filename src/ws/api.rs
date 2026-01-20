@@ -10,6 +10,11 @@ struct GamemodesResponse {
     gamemodes: Vec<SimpleGamemode>,
 }
 
+#[derive(Clone, Deserialize)]
+struct CamerasResponse {
+    cameras: Vec<String>,
+}
+
 pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
     let client = Client::new();
 
@@ -22,6 +27,8 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
         handle_game_data(&client, &state).await;
 
         handle_gamemodes(&client, &state).await;
+
+        handle_cameras(&client, &state).await;
 
         {
             let s = state.read().await;
@@ -61,16 +68,14 @@ async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) {
     {
         Ok(response) => {
             if let Ok(response_data) = response.json::<GamemodesResponse>().await {
-                handle_subscribed_gamemode(&response_data, &client, &state).await;
+                handle_subscribed_gamemode(&response_data, &client, state).await;
 
                 let mut s = state.write().await;
-                s.spectator_connection = true;
                 s.game_state.gamemodes = response_data.gamemodes;
             }
         }
         Err(e) => {
             let mut s = state.write().await;
-            s.spectator_connection = false;
             eprintln!("Failed to poll spectator API: {}", e);
         }
     }
@@ -101,6 +106,55 @@ async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &
         }
         Err(e) => {
             eprintln!("Failed to get gamemode: {}: {}", subscribed_slot_id, e);
+        }
+    }
+}
+
+async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) {
+    match client.get("http://localhost:5420/cameras")
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if let Ok(cameras_data) = response.json::<CamerasResponse>().await {
+                handle_subscribed_config(&cameras_data, &client, state).await;
+
+                let mut s = state.write().await;
+                s.game_state.cameras = cameras_data.cameras;
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to get cameras: {}", e);
+        }
+    }
+}
+
+async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &Client, state: &Arc<RwLock<AppState>>) {
+    let subscribed_camera_id = {
+        let s = state.read().await;
+        s.subscribed_camera_id.clone()
+    };
+
+    let is_subscribed = cameras_response.cameras
+        .iter()
+        .any(|cam| *cam == subscribed_camera_id);
+
+    if !is_subscribed {
+        return;
+    }
+
+    match client.get(format!("http://localhost:5420/cameras/{}/config", subscribed_camera_id))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            if let Ok(camera_config) = response.text().await {
+                let mut s = state.write().await;
+                s.game_state.selected_camera_config = Some(camera_config);
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to get subscribed camera: {}", e);
         }
     }
 }

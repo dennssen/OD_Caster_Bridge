@@ -16,8 +16,12 @@ fn main() -> eframe::Result {
             game_data: None,
             gamemodes: vec![],
             selected_gamemode: None,
+            cameras: vec![],
+            selected_camera_config: None,
         },
+
         subscribed_gamemode_slot_id: String::new(),
+        subscribed_camera_id: String::new(),
         
         home_team_name: "Home Team".to_string(),
         away_team_name: "Away Team".to_string(),

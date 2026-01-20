@@ -123,5 +123,8 @@ pub struct GameState {
     pub game_data: Option<GameData>,
     pub gamemodes: Vec<SimpleGamemode>,
     #[serde(rename = "selectedGamemode")]
-    pub selected_gamemode: Option<GamemodeData>
+    pub selected_gamemode: Option<GamemodeData>,
+    pub cameras: Vec<String>,
+    #[serde(rename = "selectedCameraConfig")]
+    pub selected_camera_config: Option<String>,
 }
