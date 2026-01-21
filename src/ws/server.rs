@@ -93,12 +93,6 @@ async fn handle_query(state: &Arc<RwLock<AppState>>, query: HashMap<String, Stri
                     s.subscribed_gamemode_slot_id = slot_id.clone();
                 }
             }
-            "setSubscribedCameraConfig" => {
-                if let Some(camera_id) = query.get("cameraId") {
-                    println!("Subscribing to camera: {}", camera_id);
-                    s.subscribed_camera_id = camera_id.clone();
-                }
-            }
             _ => {}
         }
     }

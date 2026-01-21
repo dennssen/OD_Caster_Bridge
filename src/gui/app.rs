@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::egui;
+use eframe::egui::Rect;
 use crate::gui::widgets;
 use crate::ws::state::GameState;
 
@@ -8,11 +9,6 @@ pub struct AppState {
     pub game_state: GameState,
     pub subscribed_gamemode_slot_id: String,
     pub subscribed_camera_id: String,
-
-    pub home_team_name: String,
-    pub away_team_name: String,
-    pub home_team_logo: Option<String>,
-    pub away_team_logo: Option<String>,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -38,7 +34,7 @@ impl eframe::App for OverlayProxyApp {
         ctx.request_repaint();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let state = self.state.blocking_write();
+            let mut state = self.state.blocking_write();
 
             if state.connected_clients > 0 && state.spectator_connection {
                 ui.add(widgets::StatusIndicator::connected(state.connected_clients.to_string()));
@@ -54,6 +50,85 @@ impl eframe::App for OverlayProxyApp {
                     }
                 );
             }
+
+            ui.add_space(10.0);
+
+            ui.horizontal(|ui| {
+                ui.scope(|ui| {
+                    ui.style_mut().text_styles.insert(
+                        egui::TextStyle::Button,
+                        egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                    );
+                    ui.style_mut().text_styles.insert(
+                        egui::TextStyle::Body,
+                        egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                    );
+
+                    ui.add(widgets::TinyTextEdit::single_line(
+                        "Camera API",
+                        &mut state.subscribed_camera_id
+                    ));
+                });
+            });
+
+            ui.add_space(10.0);
+
+            ui.label("Team Data");
+
+            ui.scope(|ui| {
+                ui.style_mut().text_styles.insert(
+                    egui::TextStyle::Button,
+                    egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                );
+                ui.style_mut().text_styles.insert(
+                    egui::TextStyle::Body,
+                    egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                );
+
+                ui.collapsing("Home Team", |ui| {
+                    ui.add(widgets::TinyTextEdit::single_line(
+                        "Team Name",
+                        &mut state.game_state.caster_teams.home.name
+                    ).with_desired_width(100.0));
+                    ui.horizontal(|ui| {
+                        if ui.button("Image...").clicked() {
+                            todo!()
+                        }
+                        ui.label("Team Logo");
+                    });
+                    ui.label("Current Players");
+                    ui.add(widgets::PlayerList::list(
+                        &vec![
+                            "Player1".to_string(),
+                            "Player2".to_string(),
+                            "Player3".to_string(),
+                            "Player4".to_string()
+                        ]
+                    ));
+                });
+
+                ui.collapsing("Away Team", |ui| {
+                    ui.add(widgets::TinyTextEdit::single_line(
+                        "Team Name",
+                        &mut state.game_state.caster_teams.away.name
+                    ).with_desired_width(100.0));
+                    ui.horizontal(|ui| {
+                        if ui.button("Image...").clicked() {
+                            todo!()
+                        }
+                        ui.label("Team Logo");
+                    });
+                    ui.label("Current Players");
+                    ui.add(widgets::PlayerList::list(
+                        &vec![
+                            "Player1".to_string(),
+                            "Player2".to_string(),
+                            "Player3".to_string(),
+                            "Player4".to_string()
+                        ]
+                    ));
+                });
+            });
         });
     }
 }

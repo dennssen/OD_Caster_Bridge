@@ -128,6 +128,36 @@ pub struct GamemodeData {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+pub struct CasterTeam {
+    pub name: String,
+    pub logo: String,
+}
+
+impl Default for CasterTeam {
+    fn default() -> Self {
+        Self {
+            name: String::default(),
+            logo: String::default(),
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct CasterTeams {
+    pub home: CasterTeam,
+    pub away: CasterTeam,
+}
+
+impl Default for CasterTeams {
+    fn default() -> Self {
+        Self {
+            home: CasterTeam::default(),
+            away: CasterTeam::default(),
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GameState {
     #[serde(rename = "gameData")]
     pub game_data: Option<GameData>,
@@ -137,4 +167,6 @@ pub struct GameState {
     pub cameras: Vec<String>,
     #[serde(rename = "selectedCameraConfig")]
     pub selected_camera_config: Option<String>,
+    #[serde(rename = "casterTeams")]
+    pub caster_teams: CasterTeams,
 }

@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use eframe::egui;
 use crate::ws::{server, api};
 use crate::gui::app::{OverlayProxyApp, AppState};
-use crate::ws::state::GameState;
+use crate::ws::state::{CasterTeams, GameState};
 
 fn main() -> eframe::Result {
     let (broadcast_tx, _) = tokio::sync::broadcast::channel(100);
@@ -18,15 +18,11 @@ fn main() -> eframe::Result {
             selected_gamemode: None,
             cameras: vec![],
             selected_camera_config: None,
+            caster_teams: CasterTeams::default(),
         },
 
         subscribed_gamemode_slot_id: String::new(),
-        subscribed_camera_id: String::new(),
-        
-        home_team_name: "Home Team".to_string(),
-        away_team_name: "Away Team".to_string(),
-        home_team_logo: None,
-        away_team_logo: None,
+        subscribed_camera_id: "dennssen.caster".to_string(),
         
         connected_clients: 0,
         spectator_connection: false,
@@ -52,7 +48,7 @@ fn main() -> eframe::Result {
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([320.0, 620.0])
+            .with_inner_size([320.0, 780.0])
             .with_resizable(false)
             .with_maximize_button(false),
         ..Default::default()
@@ -61,6 +57,11 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Caster Bridge",
         options,
-        Box::new(|_cc| Ok(Box::new(OverlayProxyApp::new(state)))),
+        Box::new(|cc| {
+            cc.egui_ctx.style_mut(|style| {
+                style.spacing.item_spacing.x = 2.0;
+            });
+            Ok(Box::new(OverlayProxyApp::new(state)))
+        }),
     )
 }
