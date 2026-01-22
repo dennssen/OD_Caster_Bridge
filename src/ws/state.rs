@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Color {
@@ -128,6 +129,79 @@ pub struct GamemodeData {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+pub struct Stats {
+    pub goals: i32,
+    pub saves: i32,
+    pub assists: i32,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ShotInfo {
+    pub shooter: String,
+    pub assister: String,
+    pub team: i32,
+    #[serde(rename = "shotSpeed")]
+    pub shot_speed: f64,
+    #[serde(rename = "shotDistanceMeters")]
+    pub shot_distance_meters: f64,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Round {
+    pub home: RoundScore,
+    pub away: RoundScore,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct RoundScore {
+    pub score: i32,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct TeamData {
+    #[serde(deserialize_with = "deserialize_players")]
+    pub players: HashMap<String, Stats>,
+}
+
+fn deserialize_players<'de, D>(deserializer: D) -> Result<HashMap<String, Stats>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum PlayerOrArray {
+        Players(HashMap<String, Stats>),
+        EmptyArray(Vec<()>),
+    }
+
+    match PlayerOrArray::deserialize(deserializer)? {
+        PlayerOrArray::Players(map) => Ok(map),
+        PlayerOrArray::EmptyArray(_vec) => Ok(HashMap::new()),
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct CameraApi {
+    #[serde(rename = "gamemodeId")]
+    pub gamemode_id: String,
+    pub home: TeamData,
+    pub away: TeamData,
+    pub rounds: Vec<Round>,
+    #[serde(rename = "followedPlayer")]
+    pub followed_player: String,
+    #[serde(rename = "lastShotInfo")]
+    pub last_shot_info: ShotInfo,
+    #[serde(rename = "isGracePeriod")]
+    pub is_grace_period: bool,
+    #[serde(rename = "isOvertime")]
+    pub is_overtime: bool,
+    #[serde(rename = "bestOf")]
+    pub best_of: i32,
+    #[serde(rename = "matchLengthSeconds")]
+    pub match_length_seconds: i32,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct CasterTeam {
     pub name: String,
     pub logo: String,
@@ -165,8 +239,8 @@ pub struct GameState {
     #[serde(rename = "selectedGamemode")]
     pub selected_gamemode: Option<GamemodeData>,
     pub cameras: Vec<String>,
-    #[serde(rename = "selectedCameraConfig")]
-    pub selected_camera_config: Option<String>,
+    #[serde(rename = "cameraApi")]
+    pub camera_api: Option<CameraApi>,
     #[serde(rename = "casterTeams")]
     pub caster_teams: CasterTeams,
 }

@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use tokio::sync::RwLock;
 use crate::gui::app::AppState;
-use crate::ws::state::{GameData, GamemodeData, SimpleGamemode};
+use crate::ws::state::{CameraApi, GameData, GamemodeData, SimpleGamemode};
 
 #[derive(Clone, Deserialize)]
 struct GamemodesResponse {
@@ -13,6 +13,11 @@ struct GamemodesResponse {
 #[derive(Clone, Deserialize)]
 struct CamerasResponse {
     cameras: Vec<String>,
+}
+
+#[derive(Clone, Deserialize)]
+struct CameraConfigResponse {
+    api: CameraApi
 }
 
 pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
@@ -75,7 +80,6 @@ async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) {
             }
         }
         Err(e) => {
-            let mut s = state.write().await;
             eprintln!("Failed to poll spectator API: {}", e);
         }
     }
@@ -130,27 +134,27 @@ async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) {
 }
 
 async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &Client, state: &Arc<RwLock<AppState>>) {
-    let subscribed_camera_id = {
+    let camera_api_id = {
         let s = state.read().await;
-        s.subscribed_camera_id.clone()
+        s.camera_api_id.clone()
     };
 
     let is_subscribed = cameras_response.cameras
         .iter()
-        .any(|cam| *cam == subscribed_camera_id);
+        .any(|cam| *cam == camera_api_id);
 
     if !is_subscribed {
         return;
     }
 
-    match client.get(format!("http://localhost:5420/cameras/{}/config", subscribed_camera_id))
+    match client.get(format!("http://localhost:5420/cameras/{}/config", camera_api_id))
         .send()
         .await
     {
         Ok(response) => {
-            if let Ok(camera_config) = response.text().await {
+            if let Ok(camera_config) = response.json::<CameraConfigResponse>().await {
                 let mut s = state.write().await;
-                s.game_state.selected_camera_config = Some(camera_config);
+                s.game_state.camera_api = Some(camera_config.api);
             }
         }
         Err(e) => {

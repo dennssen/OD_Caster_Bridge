@@ -93,19 +93,19 @@ impl<'t> egui::Widget for TinyTextEdit<'t> {
     }
 }
 
-pub struct PlayerList<'v> {
-    players: &'v Vec<String>,
+pub struct PlayerList {
+    players: Vec<String>,
 }
 
-impl<'v> PlayerList<'v> {
-    pub fn list(players: &'v Vec<String>) -> Self {
+impl PlayerList {
+    pub fn list(players: Vec<String>) -> Self {
         Self {
             players
         }
     }
 }
 
-impl<'v> egui::Widget for PlayerList<'v> {
+impl<'v> egui::Widget for PlayerList {
     fn ui(self, ui: &mut Ui) -> Response {
         egui::Frame::new()
             .fill(ui.visuals().faint_bg_color)
@@ -113,10 +113,18 @@ impl<'v> egui::Widget for PlayerList<'v> {
             .show(ui, |ui| {
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 2.0; // tighter spacing
-                    for (i, name) in self.players.iter().enumerate() {
+                    for i in 0..4 {
                         if i > 0 {
                             ui.separator();
                         }
+
+                        let name = {
+                            if let Some(name) = self.players.get(i) {
+                                name
+                            } else {
+                                ""
+                            }
+                        };
 
                         ui.add_sized(
                             [ui.available_width(), 0.0],

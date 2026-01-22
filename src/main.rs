@@ -17,12 +17,12 @@ fn main() -> eframe::Result {
             gamemodes: vec![],
             selected_gamemode: None,
             cameras: vec![],
-            selected_camera_config: None,
+            camera_api: None,
             caster_teams: CasterTeams::default(),
         },
 
         subscribed_gamemode_slot_id: String::new(),
-        subscribed_camera_id: "dennssen.caster".to_string(),
+        camera_api_id: "dennssen.caster".to_string(),
         
         connected_clients: 0,
         spectator_connection: false,

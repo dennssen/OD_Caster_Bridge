@@ -1,14 +1,13 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::egui;
-use eframe::egui::Rect;
 use crate::gui::widgets;
 use crate::ws::state::GameState;
 
 pub struct AppState {
     pub game_state: GameState,
     pub subscribed_gamemode_slot_id: String,
-    pub subscribed_camera_id: String,
+    pub camera_api_id: String,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -66,7 +65,7 @@ impl eframe::App for OverlayProxyApp {
 
                     ui.add(widgets::TinyTextEdit::single_line(
                         "Camera API",
-                        &mut state.subscribed_camera_id
+                        &mut state.camera_api_id
                     ));
                 });
             });
@@ -98,12 +97,11 @@ impl eframe::App for OverlayProxyApp {
                     });
                     ui.label("Current Players");
                     ui.add(widgets::PlayerList::list(
-                        &vec![
-                            "Player1".to_string(),
-                            "Player2".to_string(),
-                            "Player3".to_string(),
-                            "Player4".to_string()
-                        ]
+                        if let Some(camera_api) = &state.game_state.camera_api {
+                            camera_api.home.players.keys().cloned().collect()
+                        } else {
+                            vec![]
+                        }
                     ));
                 });
 
@@ -120,12 +118,11 @@ impl eframe::App for OverlayProxyApp {
                     });
                     ui.label("Current Players");
                     ui.add(widgets::PlayerList::list(
-                        &vec![
-                            "Player1".to_string(),
-                            "Player2".to_string(),
-                            "Player3".to_string(),
-                            "Player4".to_string()
-                        ]
+                        if let Some(camera_api) = &state.game_state.camera_api {
+                            camera_api.away.players.keys().cloned().collect()
+                        } else {
+                            vec![]
+                        }
                     ));
                 });
             });
