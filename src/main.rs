@@ -26,7 +26,10 @@ fn main() -> eframe::Result {
         
         connected_clients: 0,
         spectator_connection: false,
-        poll_interval_ms: 16,
+        poll_interval_fps: 60,
+        poll_game_data: true,
+        poll_gamemodes: true,
+        poll_cameras: true,
         broadcast_tx,
     }));
     

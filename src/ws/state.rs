@@ -31,28 +31,15 @@ pub struct Transform {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct PlayerColor {
-    pub primary: Color,
-    pub secondary: Color,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
 pub struct Player {
     #[serde(rename = "playerId")]
     pub player_id: u16,
     #[serde(rename = "playerName")]
     pub player_name: String,
-    pub root: Transform,
     pub head: Transform,
-    #[serde(rename = "leftHand")]
-    pub left_hand: Transform,
-    #[serde(rename = "rightHand")]
-    pub right_hand: Transform,
     pub velocity: Vec3,
     #[serde(rename = "teamIndex")]
     pub team_index: i8,
-    #[serde(rename = "playerColor")]
-    pub player_color: PlayerColor,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -158,7 +145,7 @@ pub struct RoundScore {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct TeamData {
+pub struct OverlayTeam {
     #[serde(deserialize_with = "deserialize_players")]
     pub players: HashMap<String, Stats>,
 }
@@ -184,8 +171,8 @@ where
 pub struct CameraApi {
     #[serde(rename = "gamemodeId")]
     pub gamemode_id: String,
-    pub home: TeamData,
-    pub away: TeamData,
+    pub home: OverlayTeam,
+    pub away: OverlayTeam,
     pub rounds: Vec<Round>,
     #[serde(rename = "followedPlayer")]
     pub followed_player: String,

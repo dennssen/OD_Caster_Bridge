@@ -11,7 +11,10 @@ pub struct AppState {
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
-    pub poll_interval_ms: u64,
+    pub poll_interval_fps: u64,
+    pub poll_game_data: bool,
+    pub poll_gamemodes: bool,
+    pub poll_cameras: bool,
     pub broadcast_tx: tokio::sync::broadcast::Sender<GameState>,
 }
 
@@ -50,6 +53,19 @@ impl eframe::App for OverlayProxyApp {
                 );
             }
 
+            ui.add_space(10.0);
+            
+            ui.collapsing("Websocket", |ui| {
+                ui.horizontal(|ui| {
+                    ui.add(egui::Slider::new(&mut state.poll_interval_fps, 1..=60));
+                    ui.label("Poll Hz");
+                });
+                
+                ui.checkbox(&mut state.poll_game_data, "Poll Game Data");
+                ui.checkbox(&mut state.poll_gamemodes, "Poll Gamemodes");
+                ui.checkbox(&mut state.poll_cameras, "Poll Cameras");
+            });
+            
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {

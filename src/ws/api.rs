@@ -24,16 +24,27 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
     let client = Client::new();
 
     loop {
-        let interval = {
-            let s = state.read().await;
-            s.poll_interval_ms
-        };
 
-        handle_game_data(&client, &state).await;
+        let s = state.read().await;
 
-        handle_gamemodes(&client, &state).await;
+        let interval = 1000 / s.poll_interval_fps;
+        let poll_game_data = s.poll_game_data;
+        let poll_gamemodes = s.poll_gamemodes;
+        let poll_cameras = s.poll_cameras;
 
-        handle_cameras(&client, &state).await;
+        drop(s);
+
+        if poll_game_data {
+            handle_game_data(&client, &state).await;
+        }
+
+        if poll_gamemodes {
+            handle_gamemodes(&client, &state).await;
+        }
+
+        if poll_cameras {
+            handle_cameras(&client, &state).await;
+        }
 
         {
             let s = state.read().await;
