@@ -1,11 +1,13 @@
 mod gui;
 mod ws;
+mod managers;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::egui;
 use crate::ws::{server, api};
 use crate::gui::app::{OverlayProxyApp, AppState};
+use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CasterTeams, GameState};
 
 fn main() -> eframe::Result {
@@ -20,14 +22,15 @@ fn main() -> eframe::Result {
             camera_api: None,
             caster_teams: CasterTeams::default(),
         },
-
         subscribed_gamemode_slot_id: String::new(),
         camera_api_id: "dennssen.caster".to_string(),
+        
+        round_manager: RoundManager::new(),
         
         connected_clients: 0,
         spectator_connection: false,
         poll_interval_fps: 60,
-        poll_game_data: true,
+        poll_game_data: false,
         poll_gamemodes: true,
         poll_cameras: true,
         broadcast_tx,

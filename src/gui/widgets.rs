@@ -1,5 +1,8 @@
+use std::collections::HashMap;
 use eframe::egui;
 use eframe::egui::{Response, TextBuffer, Ui};
+use indexmap::IndexMap;
+use crate::ws::state::Round;
 
 pub struct StatusIndicator {
     status_text: String,
@@ -130,6 +133,44 @@ impl<'v> egui::Widget for PlayerList {
                             [ui.available_width(), 0.0],
                             egui::Label::new(name).truncate()
                         );
+                    }
+                });
+            }).response
+    }
+}
+
+pub struct RoundsPicker<'v> {
+    rounds: &'v IndexMap<usize, Round>,
+    selected_value: &'v mut usize
+}
+
+impl<'v> RoundsPicker<'v> {
+    pub fn new(rounds: &'v IndexMap<usize, Round>, selected_value: &'v mut usize) -> Self {
+        Self {
+            rounds,
+            selected_value
+        }
+    }
+}
+
+impl<'v> egui::Widget for RoundsPicker<'v> {
+    fn ui(self, ui: &mut Ui) -> Response {
+        egui::Frame::new()
+            .fill(ui.visuals().faint_bg_color)
+            .inner_margin(4.0)
+            .show(ui, |ui| {
+                ui.vertical(|ui| {
+                    for (i, k) in self.rounds.keys().enumerate() {
+                        if i > 0 {
+                            ui.separator();
+                        }
+
+                        if ui.add_sized(
+                            [ui.available_width(), 0.0],
+                            egui::Button::selectable(self.selected_value == k, format!("round {}", i+1))
+                        ).clicked() {
+                            *self.selected_value = *k
+                        }
                     }
                 });
             }).response

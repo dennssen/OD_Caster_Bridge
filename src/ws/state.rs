@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Deserializer, Serialize};
+use indexmap::IndexMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Color {
@@ -133,15 +134,10 @@ pub struct ShotInfo {
     pub shot_distance_meters: f64,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Round {
-    pub home: RoundScore,
-    pub away: RoundScore,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub struct RoundScore {
-    pub score: i32,
+    pub home: i32,
+    pub away: i32,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -173,7 +169,11 @@ pub struct CameraApi {
     pub gamemode_id: String,
     pub home: OverlayTeam,
     pub away: OverlayTeam,
-    pub rounds: Vec<Round>,
+    #[serde(
+        deserialize_with = "deserialize_rounds",
+        serialize_with = "serialize_rounds"
+    )]
+    pub rounds: IndexMap<usize, Round>,
     #[serde(rename = "followedPlayer")]
     pub followed_player: String,
     #[serde(rename = "lastShotInfo")]
@@ -186,6 +186,22 @@ pub struct CameraApi {
     pub best_of: i32,
     #[serde(rename = "matchLengthSeconds")]
     pub match_length_seconds: i32,
+}
+
+fn deserialize_rounds<'de, D>(deserializer: D) -> Result<IndexMap<usize, Round>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let rounds = Vec::<Round>::deserialize(deserializer)?;
+    Ok(rounds.into_iter().enumerate().collect())
+}
+
+fn serialize_rounds<S>(map: &IndexMap<usize, Round>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let items: Vec<&Round> = map.values().collect();
+    items.serialize(serializer)
 }
 
 #[derive(Clone, Deserialize, Serialize)]

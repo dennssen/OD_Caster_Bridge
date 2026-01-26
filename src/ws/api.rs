@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use tokio::sync::RwLock;
 use crate::gui::app::AppState;
+use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CameraApi, GameData, GamemodeData, SimpleGamemode};
 
 #[derive(Clone, Deserialize)]
@@ -163,8 +164,31 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
         .await
     {
         Ok(response) => {
-            if let Ok(camera_config) = response.json::<CameraConfigResponse>().await {
+            if let Ok(mut camera_config) = response.json::<CameraConfigResponse>().await {
                 let mut s = state.write().await;
+
+                s.round_manager.best_of = camera_config.api.best_of;
+
+                let should_process = if let Some(api) = s.game_state.camera_api.as_ref() {
+                    s.round_manager.has_wiped(&camera_config.api.rounds).then(|| api.rounds.clone())
+                } else {
+                    None
+                };
+
+                if let Some(api_rounds) = should_process {
+                    println!("has wiped");
+                    if s.round_manager.should_archive(&api_rounds) {
+                        println!("archiving, no winner");
+                        s.round_manager.archive_rounds()
+                    } else {
+                        println!("winner, removing overrides");
+                        s.round_manager.clear_archives();
+                        s.round_manager.clear_overrides();
+                    }
+                }
+
+                camera_config.api.rounds = s.round_manager.convert_rounds(&camera_config.api.rounds);
+
                 s.game_state.camera_api = Some(camera_config.api);
             }
         }

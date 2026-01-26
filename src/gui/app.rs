@@ -1,13 +1,24 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::egui;
+use indexmap::IndexMap;
 use crate::gui::widgets;
-use crate::ws::state::GameState;
+use crate::managers::rounds::{RoundManager, RoundOverride};
+use crate::ws::state::{CameraApi, GameState, Round};
+
+enum RoundAction {
+    Override(Round),
+    Delete,
+    None
+}
 
 pub struct AppState {
     pub game_state: GameState,
     pub subscribed_gamemode_slot_id: String,
     pub camera_api_id: String,
+
+    pub round_manager: RoundManager,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -20,12 +31,14 @@ pub struct AppState {
 
 pub struct OverlayProxyApp {
     state: Arc<RwLock<AppState>>,
+    selected_round: usize,
 }
 
 impl OverlayProxyApp {
     pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
         Self {
             state,
+            selected_round: 1,
         }
     }
 }
@@ -140,6 +153,65 @@ impl eframe::App for OverlayProxyApp {
                             vec![]
                         }
                     ));
+                });
+
+                ui.collapsing("Rounds", |ui| {
+                    if let Some(api) = state.game_state.camera_api.as_ref() {
+                        let rounds: &IndexMap<usize, Round> = &api.rounds;
+
+                        ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round));
+
+                        let round_action: RoundAction = if let Some(round) = rounds.get(&self.selected_round) {
+                            let mut round = round.clone();
+                            let mut changed: bool = false;
+                            let mut should_delete: bool = false;
+
+                            ui.separator();
+                            ui.horizontal(|ui| {
+                                ui.vertical(|ui| {
+                                    ui.label("Home");
+                                    if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
+                                        changed = true;
+                                    }
+                                });
+
+                                ui.add_space(20.0);
+
+                                ui.vertical(|ui| {
+                                    ui.label("Away");
+                                    if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
+                                        changed = true;
+                                    }
+                                });
+
+                                ui.add_space(20.0);
+
+                                if ui.button("Delete").clicked() {
+                                    should_delete = true;
+                                }
+                            });
+
+                            if should_delete {
+                                RoundAction::Delete
+                            } else if changed {
+                                RoundAction::Override(Round {home: round.home, away: round.away})
+                            } else {
+                                RoundAction::None
+                            }
+                        } else {
+                            RoundAction::None
+                        };
+
+                        match round_action {
+                            RoundAction::Override(round) => {
+                                state.round_manager.add_override(self.selected_round, RoundOverride::Replace(round));
+                            }
+                            RoundAction::Delete => {
+                                state.round_manager.add_override(self.selected_round, RoundOverride::Delete);
+                            }
+                            RoundAction::None => {}
+                        }
+                    }
                 });
             });
         });
