@@ -1,16 +1,26 @@
 mod gui;
 mod ws;
 mod managers;
+mod http;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::egui;
 use crate::ws::{server, api};
 use crate::gui::app::{OverlayProxyApp, AppState};
+use crate::managers::appdata::AppData;
 use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CasterTeams, GameState};
 
+/* TODO:
+    Incorporate data from spectator/camera into the gui
+    - Players on teams (Done but the order is different every fetch)
+    Logo uploading
+*/
+
 fn main() -> eframe::Result {
+    AppData::get_or_init();
+    
     let (broadcast_tx, _) = tokio::sync::broadcast::channel(100);
 
     let state = Arc::new(RwLock::new(AppState {
@@ -50,6 +60,10 @@ fn main() -> eframe::Result {
         rt.block_on(async {
             server::run_websocket_server(ws_state).await;
         });
+    });
+    
+    std::thread::spawn(|| {
+        http::server::handle_http();
     });
 
     let options = eframe::NativeOptions {
