@@ -6,6 +6,7 @@ mod http;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::egui;
+use egui_extras::install_image_loaders;
 use crate::ws::{server, api};
 use crate::gui::app::{OverlayProxyApp, AppState};
 use crate::managers::appdata::AppData;
@@ -15,12 +16,12 @@ use crate::ws::state::{CasterTeams, GameState};
 /* TODO:
     Incorporate data from spectator/camera into the gui
     - Players on teams (Done but the order is different every fetch)
-    Logo uploading
+    - manage spectator connection by more endpoints than just /state
 */
 
 fn main() -> eframe::Result {
     AppData::get_or_init();
-    
+
     let (broadcast_tx, _) = tokio::sync::broadcast::channel(100);
 
     let state = Arc::new(RwLock::new(AppState {
@@ -61,7 +62,7 @@ fn main() -> eframe::Result {
             server::run_websocket_server(ws_state).await;
         });
     });
-    
+
     std::thread::spawn(|| {
         http::server::handle_http();
     });
@@ -81,6 +82,7 @@ fn main() -> eframe::Result {
             cc.egui_ctx.style_mut(|style| {
                 style.spacing.item_spacing.x = 2.0;
             });
+            install_image_loaders(&cc.egui_ctx);
             Ok(Box::new(OverlayProxyApp::new(state)))
         }),
     )

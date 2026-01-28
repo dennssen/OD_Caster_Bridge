@@ -3,7 +3,7 @@ use std::path::Path;
 use tiny_http::{Header, Response, Server};
 use crate::managers::appdata::AppData;
 
-static HTTP_ADDRESS: &str = "127.0.0.1:8081";
+pub static HTTP_ADDRESS: &str = "127.0.0.1:8081";
 
 pub fn handle_http() {
     let server = Server::http("127.0.0.1:8081").unwrap();
@@ -11,6 +11,8 @@ pub fn handle_http() {
 
     for request in server.incoming_requests() {
         let url = request.url();
+
+        let cors_header = Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..]).unwrap();
 
         if url.starts_with("/logos/") {
             let url_path = Path::new(url);
@@ -26,7 +28,14 @@ pub fn handle_http() {
             }
 
             let filename = try_filename.unwrap();
-            let filepath = AppData::get_data_path().join("logos").join(filename);
+            let logos_path = AppData::get_data_path().join("logos");
+            let filepath = if filename.starts_with("home") {
+                logos_path.join("home").join(filename)
+            } else if filename.starts_with("away") {
+                logos_path.join("away").join(filename)
+            } else {
+                logos_path.join("404")
+            };
 
             match fs::read(&filepath) {
                 Ok(content) => {
@@ -39,18 +48,23 @@ pub fn handle_http() {
                     };
 
                     let header = Header::from_bytes(&b"Content-Type"[..], content_type.as_bytes()).unwrap();
-                    let response = Response::from_data(content).with_header(header);
+                    let response = Response::from_data(content)
+                        .with_header(header)
+                        .with_header(cors_header);
                     let _ = request.respond(response);
                 }
                 Err(e) => {
                     let response = Response::from_string("404 - File not found")
-                        .with_status_code(404);
+                        .with_status_code(404)
+                        .with_header(cors_header);
+                    eprintln!("Failed to read {:?}: {}", filepath, e);
                     let _ = request.respond(response);
                 }
             }
         } else {
             let response = Response::from_string("404 - Not found")
-                .with_status_code(404);
+                .with_status_code(404)
+                .with_header(cors_header);
             let _ = request.respond(response);
         }
     }

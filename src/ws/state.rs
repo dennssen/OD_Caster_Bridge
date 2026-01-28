@@ -207,14 +207,15 @@ where
 #[derive(Clone, Deserialize, Serialize)]
 pub struct CasterTeam {
     pub name: String,
-    pub logo: String,
+    #[serde(rename = "logoUrl")]
+    pub logo_url: String,
 }
 
 impl Default for CasterTeam {
     fn default() -> Self {
         Self {
             name: String::default(),
-            logo: String::default(),
+            logo_url: String::default(),
         }
     }
 }
