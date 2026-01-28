@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use eframe::egui;
 use eframe::egui::{Response, TextBuffer, Ui};
 use indexmap::IndexMap;

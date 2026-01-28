@@ -3,7 +3,6 @@ use reqwest::Client;
 use serde::Deserialize;
 use tokio::sync::RwLock;
 use crate::gui::app::AppState;
-use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CameraApi, GameData, GamemodeData, SimpleGamemode};
 
 #[derive(Clone, Deserialize)]
@@ -26,6 +25,11 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
 
     loop {
 
+        {
+            let mut s = state.write().await;
+            s.spectator_connection = true;
+        }
+
         let s = state.read().await;
 
         let interval = 1000 / s.poll_interval_fps;
@@ -35,16 +39,29 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
 
         drop(s);
 
+        let mut connected: bool = false;
+
         if poll_game_data {
-            handle_game_data(&client, &state).await;
+            if handle_game_data(&client, &state).await {
+                connected = true;
+            }
         }
 
         if poll_gamemodes {
-            handle_gamemodes(&client, &state).await;
+            if handle_gamemodes(&client, &state).await {
+                connected = true;
+            }
         }
 
         if poll_cameras {
-            handle_cameras(&client, &state).await;
+            if handle_cameras(&client, &state).await {
+                connected = true;
+            }
+        }
+
+        {
+            let mut s = state.write().await;
+            s.spectator_connection = connected;
         }
 
         {
@@ -56,7 +73,7 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
     }
 }
 
-async fn handle_game_data(client: &Client, state: &Arc<RwLock<AppState>>) {
+async fn handle_game_data(client: &Client, state: &Arc<RwLock<AppState>>) -> bool {
     match client.get("http://localhost:5420/state/")
         .send()
         .await
@@ -65,20 +82,19 @@ async fn handle_game_data(client: &Client, state: &Arc<RwLock<AppState>>) {
             if let Ok(game_data) = response.json::<GameData>().await {
                 {
                     let mut s = state.write().await;
-                    s.spectator_connection = true;
                     s.game_state.game_data = Some(game_data.clone());
                 }
             }
+            true
         }
         Err(e) => {
-            let mut s = state.write().await;
-            s.spectator_connection = false;
             eprintln!("Failed to poll spectator API: {}", e);
+            false
         }
     }
 }
 
-async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) {
+async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) -> bool {
     match client.get("http://localhost:5420/state/gamemodes")
         .send()
         .await
@@ -90,14 +106,16 @@ async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) {
                 let mut s = state.write().await;
                 s.game_state.gamemodes = response_data.gamemodes;
             }
+            true
         }
         Err(e) => {
             eprintln!("Failed to poll spectator API: {}", e);
+            false
         }
     }
 }
 
-async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &Client, state: &Arc<RwLock<AppState>>) {
+async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &Client, state: &Arc<RwLock<AppState>>) -> bool {
     let subscribed_slot_id = {
         let s = state.read().await;
         s.subscribed_gamemode_slot_id.clone()
@@ -107,7 +125,7 @@ async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &
         .any(|gm| gm.slot_id == subscribed_slot_id);
 
     if !is_subscribed {
-        return
+        return false
     }
 
     match client.get(format!("http://localhost:5420/state/gamemodes/{}", subscribed_slot_id))
@@ -119,14 +137,16 @@ async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &
                 let mut s = state.write().await;
                 s.game_state.selected_gamemode = Some(gamemode_data);
             }
+            true
         }
         Err(e) => {
             eprintln!("Failed to get gamemode: {}: {}", subscribed_slot_id, e);
+            false
         }
     }
 }
 
-async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) {
+async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) -> bool {
     match client.get("http://localhost:5420/cameras")
         .send()
         .await
@@ -138,14 +158,16 @@ async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) {
                 let mut s = state.write().await;
                 s.game_state.cameras = cameras_data.cameras;
             }
+            true
         }
         Err(e) => {
             eprintln!("Failed to get cameras: {}", e);
+            false
         }
     }
 }
 
-async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &Client, state: &Arc<RwLock<AppState>>) {
+async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &Client, state: &Arc<RwLock<AppState>>) -> bool {
     let camera_api_id = {
         let s = state.read().await;
         s.camera_api_id.clone()
@@ -156,7 +178,7 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
         .any(|cam| *cam == camera_api_id);
 
     if !is_subscribed {
-        return;
+        return false;
     }
 
     match client.get(format!("http://localhost:5420/cameras/{}/config", camera_api_id))
@@ -191,9 +213,11 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
 
                 s.game_state.camera_api = Some(camera_config.api);
             }
+            true
         }
         Err(e) => {
             eprintln!("Failed to get subscribed camera: {}", e);
+            false
         }
     }
 }

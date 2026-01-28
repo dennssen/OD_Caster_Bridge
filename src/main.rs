@@ -13,14 +13,8 @@ use crate::managers::appdata::AppData;
 use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CasterTeams, GameState};
 
-/* TODO:
-    Incorporate data from spectator/camera into the gui
-    - Players on teams (Done but the order is different every fetch)
-    - manage spectator connection by more endpoints than just /state
-*/
-
 fn main() -> eframe::Result {
-    AppData::get_or_init();
+    let app_data = AppData::get_or_init();
 
     let (broadcast_tx, _) = tokio::sync::broadcast::channel(100);
 
@@ -34,16 +28,16 @@ fn main() -> eframe::Result {
             caster_teams: CasterTeams::default(),
         },
         subscribed_gamemode_slot_id: String::new(),
-        camera_api_id: "dennssen.caster".to_string(),
+        camera_api_id: app_data.camera_api_id,
         
         round_manager: RoundManager::new(),
         
         connected_clients: 0,
         spectator_connection: false,
-        poll_interval_fps: 60,
-        poll_game_data: false,
-        poll_gamemodes: true,
-        poll_cameras: true,
+        poll_interval_fps: app_data.poll_interval_fps,
+        poll_game_data: app_data.poll_game_data,
+        poll_gamemodes: app_data.poll_gamemodes,
+        poll_cameras: app_data.poll_cameras,
         broadcast_tx,
     }));
     

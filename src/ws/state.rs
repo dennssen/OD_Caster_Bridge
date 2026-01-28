@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -143,23 +142,23 @@ pub struct Round {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OverlayTeam {
     #[serde(deserialize_with = "deserialize_players")]
-    pub players: HashMap<String, Stats>,
+    pub players: IndexMap<String, Stats>,
 }
 
-fn deserialize_players<'de, D>(deserializer: D) -> Result<HashMap<String, Stats>, D::Error>
+fn deserialize_players<'de, D>(deserializer: D) -> Result<IndexMap<String, Stats>, D::Error>
 where
     D: Deserializer<'de>,
 {
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum PlayerOrArray {
-        Players(HashMap<String, Stats>),
+        Players(IndexMap<String, Stats>),
         EmptyArray(Vec<()>),
     }
 
     match PlayerOrArray::deserialize(deserializer)? {
         PlayerOrArray::Players(map) => Ok(map),
-        PlayerOrArray::EmptyArray(_vec) => Ok(HashMap::new()),
+        PlayerOrArray::EmptyArray(_vec) => Ok(IndexMap::new()),
     }
 }
 
