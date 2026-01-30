@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::{egui, Storage};
 use eframe::egui::{RichText, SizeHint, TextureOptions, Ui};
+use eframe::egui::load::{TextureLoadResult, TexturePoll};
 use indexmap::IndexMap;
 use crate::gui::widgets;
 use crate::http::logos::{get_and_upload_logo, Team};
@@ -134,7 +135,19 @@ impl eframe::App for OverlayProxyApp {
                                 }
                                 ui.label("Team Logo");
                             });
-                            show_image_if_exists(ctx, ui, &state.game_state.caster_teams.home.logo_url);
+                            if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.home.logo_url) {
+                                if let Some(image_size) = get_image_size(texture) {
+                                    ui.horizontal(|ui| {
+                                        ui.add(
+                                            egui::Image::new(&state.game_state.caster_teams.home.logo_url)
+                                                .fit_to_exact_size(image_size)
+                                        );
+                                        if ui.button("X").clicked() {
+                                            state.game_state.caster_teams.home.logo_url = String::new();
+                                        }
+                                    });
+                                }
+                            }
                             ui.label("Current Players");
                             ui.add(widgets::PlayerList::list(
                                 if let Some(camera_api) = &state.game_state.camera_api {
@@ -156,7 +169,19 @@ impl eframe::App for OverlayProxyApp {
                                 }
                                 ui.label("Team Logo");
                             });
-                            show_image_if_exists(ctx, ui, &state.game_state.caster_teams.away.logo_url);
+                            if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.away.logo_url) {
+                                if let Some(image_size) = get_image_size(texture) {
+                                    ui.horizontal(|ui| {
+                                        ui.add(
+                                            egui::Image::new(&state.game_state.caster_teams.away.logo_url)
+                                                .fit_to_exact_size(image_size)
+                                        );
+                                        if ui.button("X").clicked() {
+                                            state.game_state.caster_teams.away.logo_url = String::new();
+                                        }
+                                    });
+                                }
+                            }
                             ui.label("Current Players");
                             ui.add(widgets::PlayerList::list(
                                 if let Some(camera_api) = &state.game_state.camera_api {
@@ -245,18 +270,19 @@ impl eframe::App for OverlayProxyApp {
     }
 }
 
-fn show_image_if_exists(ctx: &egui::Context, ui: &mut Ui, source: &str) {
-    if let Ok(texture) = ctx.try_load_texture(source, TextureOptions::default(), SizeHint::Width(50)) {
-        if let Some(original_size) = texture.size() {
-            let aspect_ratio = original_size.y / original_size.x;
+fn does_image_exist(ctx: &egui::Context, source: &str) -> TextureLoadResult {
+    ctx.try_load_texture(source, TextureOptions::default(), SizeHint::Width(50))
+}
 
-            let desired_width = 50.0;
-            let calculated_height = desired_width * aspect_ratio;
+fn get_image_size(texture: TexturePoll) -> Option<egui::Vec2> {
+    if let Some(original_size) = texture.size() {
+        let aspect_ratio = original_size.y / original_size.x;
 
-            ui.add(
-                egui::Image::new(source)
-                    .fit_to_exact_size(egui::vec2(desired_width, calculated_height))
-            );
-        }
+        let desired_width = 50.0;
+        let calculated_height = desired_width * aspect_ratio;
+
+        Some(egui::vec2(desired_width, calculated_height))
+    } else {
+        None
     }
 }
