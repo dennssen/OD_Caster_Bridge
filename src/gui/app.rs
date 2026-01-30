@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use eframe::{egui, Storage};
-use eframe::egui::{RichText, SizeHint, TextureOptions, Ui};
+use eframe::egui::{RichText, SizeHint, TextureOptions};
 use eframe::egui::load::{TextureLoadResult, TexturePoll};
 use indexmap::IndexMap;
 use crate::gui::widgets;
