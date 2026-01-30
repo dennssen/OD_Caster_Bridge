@@ -24,12 +24,6 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
     let client = Client::new();
 
     loop {
-
-        {
-            let mut s = state.write().await;
-            s.spectator_connection = true;
-        }
-
         let s = state.read().await;
 
         let interval = 1000 / s.poll_interval_fps;
