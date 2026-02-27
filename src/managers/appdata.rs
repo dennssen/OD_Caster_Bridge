@@ -11,6 +11,8 @@ pub struct AppData {
     pub poll_game_data: bool,
     pub poll_gamemodes: bool,
     pub poll_cameras: bool,
+    pub window_position_x: Option<f32>,
+    pub window_position_y: Option<f32>
 }
 
 impl Default for AppData {
@@ -20,7 +22,9 @@ impl Default for AppData {
             poll_interval_fps: 60,
             poll_game_data: false,
             poll_gamemodes: true,
-            poll_cameras: true
+            poll_cameras: true,
+            window_position_x: None,
+            window_position_y: None
         }
     }
 }

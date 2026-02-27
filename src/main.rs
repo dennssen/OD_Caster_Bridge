@@ -62,11 +62,17 @@ fn main() -> eframe::Result {
         http::server::handle_http();
     });
 
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([320.0, 780.0])
+        .with_resizable(false)
+        .with_maximize_button(false);
+
+    if let (Some(pos_x), Some(pos_y)) = (app_data.window_position_x, app_data.window_position_y) {
+        viewport = viewport.with_position([pos_x, pos_y]);
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([320.0, 780.0])
-            .with_resizable(false)
-            .with_maximize_button(false),
+        viewport,
         ..Default::default()
     };
 

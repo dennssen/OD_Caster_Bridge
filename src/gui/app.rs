@@ -1,8 +1,9 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use eframe::{egui, Storage};
-use eframe::egui::{RichText, SizeHint, TextureOptions};
+use eframe::egui;
+use eframe::egui::{Pos2, RichText, SizeHint, TextureOptions};
 use eframe::egui::load::{TextureLoadResult, TexturePoll};
+use eframe::glow::Context;
 use indexmap::IndexMap;
 use crate::gui::widgets;
 use crate::http::logos::{get_and_upload_logo, Team};
@@ -35,6 +36,8 @@ pub struct AppState {
 pub struct OverlayProxyApp {
     state: Arc<RwLock<AppState>>,
     selected_round: usize,
+    window_position: Option<Pos2>,
+    first_frame: bool,
 }
 
 impl OverlayProxyApp {
@@ -42,14 +45,26 @@ impl OverlayProxyApp {
         Self {
             state,
             selected_round: 1,
+            window_position: None,
+            first_frame: true,
         }
     }
 }
 
 impl eframe::App for OverlayProxyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.set_pixels_per_point(1.5);
+        if self.first_frame {
+            ctx.set_pixels_per_point(1.5);
+
+            self.first_frame = false;
+        }
         ctx.request_repaint();
+
+        let outer_rect = ctx.input(|i| i.viewport().outer_rect);
+        if let Some(outer_rect) = outer_rect {
+            let position = outer_rect.left_top() * ctx.pixels_per_point();
+            self.window_position = Some(position);
+        }
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical()
@@ -255,8 +270,17 @@ impl eframe::App for OverlayProxyApp {
         });
     }
 
-    fn save(&mut self, _storage: &mut dyn Storage) {
+    fn on_exit(&mut self, _gl: Option<&Context>) {
         let state = self.state.blocking_read();
+        let window_position: Option<Pos2> = self.window_position;
+        let (window_position_x, window_position_y) = match window_position {
+            Some(pos) => {
+                (Some(pos.x), Some(pos.y))
+            }
+            None => {
+                (None, None)
+            }
+        };
 
         let final_app_data: AppData = AppData {
             camera_api_id: state.camera_api_id.clone(),
@@ -264,8 +288,10 @@ impl eframe::App for OverlayProxyApp {
             poll_game_data: state.poll_game_data,
             poll_gamemodes: state.poll_gamemodes,
             poll_cameras: state.poll_cameras,
+            window_position_x,
+            window_position_y
         };
-        
+
         final_app_data.save();
     }
 }
