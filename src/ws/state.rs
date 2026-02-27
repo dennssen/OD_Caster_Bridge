@@ -79,7 +79,13 @@ pub struct SimplePlayer {
     pub player_id: u16,
     #[serde(rename = "playerName")]
     pub player_name: String,
-    position: Vec3,
+    pub position: Vec3,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct TeamColor {
+    pub primary: Color,
+    pub secondary: Color,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -90,12 +96,6 @@ pub struct GamemodeTeam {
     pub players: Vec<SimplePlayer>,
     #[serde(rename = "teamColor")]
     pub team_color: TeamColor,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub struct TeamColor {
-    pub primary: Color,
-    pub secondary: Color,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
