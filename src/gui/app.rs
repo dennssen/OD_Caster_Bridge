@@ -62,7 +62,7 @@ impl eframe::App for OverlayProxyApp {
 
         let outer_rect = ctx.input(|i| i.viewport().outer_rect);
         if let Some(outer_rect) = outer_rect {
-            let position = outer_rect.left_top() * ctx.pixels_per_point();
+            let position = outer_rect.left_top();
             self.window_position = Some(position);
         }
 
