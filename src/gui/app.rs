@@ -127,143 +127,158 @@ impl eframe::App for OverlayProxyApp {
 
                     ui.add_space(10.0);
 
-                    ui.label("Team Data");
-
-                    ui.scope(|ui| {
-                        ui.style_mut().text_styles.insert(
-                            egui::TextStyle::Button,
-                            egui::FontId::new(10.0, egui::FontFamily::Proportional)
-                        );
-                        ui.style_mut().text_styles.insert(
-                            egui::TextStyle::Body,
-                            egui::FontId::new(10.0, egui::FontFamily::Proportional)
-                        );
-
-                        ui.collapsing("Home Team", |ui| {
+                    ui.collapsing("Match Data", |ui| {
+                        ui.scope(|ui| {
+                            ui.style_mut().text_styles.insert(
+                                egui::TextStyle::Button,
+                                egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                            );
+                            ui.style_mut().text_styles.insert(
+                                egui::TextStyle::Body,
+                                egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                            );
+                            
                             ui.add(widgets::TinyTextEdit::single_line(
-                                "Team Name",
-                                &mut state.game_state.caster_teams.home.name
+                                "Match Host",
+                                &mut state.game_state.match_data.host
                             ).with_desired_width(100.0));
-                            ui.horizontal(|ui| {
-                                if ui.button("Image...").clicked() {
-                                    get_and_upload_logo(Team::Home(state.game_state.caster_teams.home.name.clone()), &mut state);
-                                }
-                                ui.label("Team Logo");
-                            });
-                            if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.home.logo_url) {
-                                if let Some(image_size) = get_image_size(texture) {
-                                    ui.horizontal(|ui| {
-                                        ui.add(
-                                            egui::Image::new(&state.game_state.caster_teams.home.logo_url)
-                                                .fit_to_exact_size(image_size)
-                                        );
-                                        if ui.button("X").clicked() {
-                                            state.game_state.caster_teams.home.logo_url = String::new();
-                                        }
-                                    });
-                                }
-                            }
-                            ui.label("Current Players");
-                            ui.add(widgets::PlayerList::list(
-                                if let Some(camera_api) = &state.game_state.camera_api {
-                                    camera_api.home.players.keys().cloned().collect()
-                                } else {
-                                    vec![]
-                                }
-                            ));
-                        });
-
-                        ui.collapsing("Away Team", |ui| {
                             ui.add(widgets::TinyTextEdit::single_line(
-                                "Team Name",
-                                &mut state.game_state.caster_teams.away.name
+                                "Match Name",
+                                &mut state.game_state.match_data.name
                             ).with_desired_width(100.0));
-                            ui.horizontal(|ui| {
-                                if ui.button("Image...").clicked() {
-                                    get_and_upload_logo(Team::Away(state.game_state.caster_teams.away.name.clone()), &mut state);
+                            ui.add(widgets::TinyTextEdit::single_line(
+                                "Match Stage",
+                                &mut state.game_state.match_data.stage
+                            ).with_desired_width(100.0));
+
+                            ui.spacing();
+
+                            ui.collapsing("Home Team", |ui| {
+                                ui.add(widgets::TinyTextEdit::single_line(
+                                    "Team Name",
+                                    &mut state.game_state.caster_teams.home.name
+                                ).with_desired_width(100.0));
+                                ui.horizontal(|ui| {
+                                    if ui.button("Image...").clicked() {
+                                        get_and_upload_logo(Team::Home(state.game_state.caster_teams.home.name.clone()), &mut state);
+                                    }
+                                    ui.label("Team Logo");
+                                });
+                                if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.home.logo_url) {
+                                    if let Some(image_size) = get_image_size(texture) {
+                                        ui.horizontal(|ui| {
+                                            ui.add(
+                                                egui::Image::new(&state.game_state.caster_teams.home.logo_url)
+                                                    .fit_to_exact_size(image_size)
+                                            );
+                                            if ui.button("X").clicked() {
+                                                state.game_state.caster_teams.home.logo_url = String::new();
+                                            }
+                                        });
+                                    }
                                 }
-                                ui.label("Team Logo");
+                                ui.label("Current Players");
+                                ui.add(widgets::PlayerList::list(
+                                    if let Some(camera_api) = &state.game_state.camera_api {
+                                        camera_api.home.players.keys().cloned().collect()
+                                    } else {
+                                        vec![]
+                                    }
+                                ));
                             });
-                            if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.away.logo_url) {
-                                if let Some(image_size) = get_image_size(texture) {
-                                    ui.horizontal(|ui| {
-                                        ui.add(
-                                            egui::Image::new(&state.game_state.caster_teams.away.logo_url)
-                                                .fit_to_exact_size(image_size)
-                                        );
-                                        if ui.button("X").clicked() {
-                                            state.game_state.caster_teams.away.logo_url = String::new();
-                                        }
-                                    });
+
+                            ui.collapsing("Away Team", |ui| {
+                                ui.add(widgets::TinyTextEdit::single_line(
+                                    "Team Name",
+                                    &mut state.game_state.caster_teams.away.name
+                                ).with_desired_width(100.0));
+                                ui.horizontal(|ui| {
+                                    if ui.button("Image...").clicked() {
+                                        get_and_upload_logo(Team::Away(state.game_state.caster_teams.away.name.clone()), &mut state);
+                                    }
+                                    ui.label("Team Logo");
+                                });
+                                if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.away.logo_url) {
+                                    if let Some(image_size) = get_image_size(texture) {
+                                        ui.horizontal(|ui| {
+                                            ui.add(
+                                                egui::Image::new(&state.game_state.caster_teams.away.logo_url)
+                                                    .fit_to_exact_size(image_size)
+                                            );
+                                            if ui.button("X").clicked() {
+                                                state.game_state.caster_teams.away.logo_url = String::new();
+                                            }
+                                        });
+                                    }
                                 }
-                            }
-                            ui.label("Current Players");
-                            ui.add(widgets::PlayerList::list(
-                                if let Some(camera_api) = &state.game_state.camera_api {
-                                    camera_api.away.players.keys().cloned().collect()
-                                } else {
-                                    vec![]
-                                }
-                            ));
-                        });
+                                ui.label("Current Players");
+                                ui.add(widgets::PlayerList::list(
+                                    if let Some(camera_api) = &state.game_state.camera_api {
+                                        camera_api.away.players.keys().cloned().collect()
+                                    } else {
+                                        vec![]
+                                    }
+                                ));
+                            });
 
-                        ui.collapsing("Rounds", |ui| {
-                            if let Some(api) = state.game_state.camera_api.as_ref() {
-                                let rounds: &IndexMap<usize, Round> = &api.rounds;
+                            ui.collapsing("Rounds", |ui| {
+                                if let Some(api) = state.game_state.camera_api.as_ref() {
+                                    let rounds: &IndexMap<usize, Round> = &api.rounds;
 
-                                ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round));
+                                    ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round));
 
-                                let round_action: RoundAction = if let Some(round) = rounds.get(&self.selected_round) {
-                                    let mut round = round.clone();
-                                    let mut changed: bool = false;
-                                    let mut should_delete: bool = false;
+                                    let round_action: RoundAction = if let Some(round) = rounds.get(&self.selected_round) {
+                                        let mut round = round.clone();
+                                        let mut changed: bool = false;
+                                        let mut should_delete: bool = false;
 
-                                    ui.separator();
-                                    ui.horizontal(|ui| {
-                                        ui.vertical(|ui| {
-                                            ui.label("Home");
-                                            if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
-                                                changed = true;
+                                        ui.separator();
+                                        ui.horizontal(|ui| {
+                                            ui.vertical(|ui| {
+                                                ui.label("Home");
+                                                if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
+                                                    changed = true;
+                                                }
+                                            });
+
+                                            ui.add_space(20.0);
+
+                                            ui.vertical(|ui| {
+                                                ui.label("Away");
+                                                if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
+                                                    changed = true;
+                                                }
+                                            });
+
+                                            ui.add_space(20.0);
+
+                                            if ui.button("Delete").clicked() {
+                                                should_delete = true;
                                             }
                                         });
 
-                                        ui.add_space(20.0);
-
-                                        ui.vertical(|ui| {
-                                            ui.label("Away");
-                                            if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
-                                                changed = true;
-                                            }
-                                        });
-
-                                        ui.add_space(20.0);
-
-                                        if ui.button("Delete").clicked() {
-                                            should_delete = true;
+                                        if should_delete {
+                                            RoundAction::Delete
+                                        } else if changed {
+                                            RoundAction::Override(Round {home: round.home, away: round.away})
+                                        } else {
+                                            RoundAction::None
                                         }
-                                    });
-
-                                    if should_delete {
-                                        RoundAction::Delete
-                                    } else if changed {
-                                        RoundAction::Override(Round {home: round.home, away: round.away})
                                     } else {
                                         RoundAction::None
-                                    }
-                                } else {
-                                    RoundAction::None
-                                };
+                                    };
 
-                                match round_action {
-                                    RoundAction::Override(round) => {
-                                        state.round_manager.add_override(self.selected_round, RoundOverride::Replace(round));
+                                    match round_action {
+                                        RoundAction::Override(round) => {
+                                            state.round_manager.add_override(self.selected_round, RoundOverride::Replace(round));
+                                        }
+                                        RoundAction::Delete => {
+                                            state.round_manager.add_override(self.selected_round, RoundOverride::Delete);
+                                        }
+                                        RoundAction::None => {}
                                     }
-                                    RoundAction::Delete => {
-                                        state.round_manager.add_override(self.selected_round, RoundOverride::Delete);
-                                    }
-                                    RoundAction::None => {}
                                 }
-                            }
+                            });
                         });
                     });
             });

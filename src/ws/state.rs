@@ -235,6 +235,23 @@ impl Default for CasterTeams {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+pub struct MatchData {
+    pub host: String,
+    pub name: String,
+    pub stage: String,
+}
+
+impl Default for MatchData {
+    fn default() -> Self {
+        Self {
+            host: String::default(),
+            name: String::default(),
+            stage: String::default()
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GameState {
     #[serde(rename = "gameData")]
     pub game_data: Option<GameData>,
@@ -246,4 +263,6 @@ pub struct GameState {
     pub camera_api: Option<CameraApi>,
     #[serde(rename = "casterTeams")]
     pub caster_teams: CasterTeams,
+    #[serde(rename = "matchData")]
+    pub match_data: MatchData,
 }

@@ -12,7 +12,7 @@ use crate::ws::{server, api};
 use crate::gui::app::{OverlayProxyApp, AppState};
 use crate::managers::appdata::AppData;
 use crate::managers::rounds::RoundManager;
-use crate::ws::state::{CasterTeams, GameState};
+use crate::ws::state::{CasterTeams, GameState, MatchData};
 
 fn main() -> eframe::Result {
     let app_data = AppData::get_or_init();
@@ -27,6 +27,7 @@ fn main() -> eframe::Result {
             cameras: vec![],
             camera_api: None,
             caster_teams: CasterTeams::default(),
+            match_data: MatchData::default(),
         },
         subscribed_gamemode_slot_id: String::new(),
         camera_api_id: app_data.camera_api_id,
@@ -63,7 +64,7 @@ fn main() -> eframe::Result {
     });
 
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([320.0, 780.0])
+        .with_inner_size([340.0, 780.0])
         .with_resizable(false)
         .with_maximize_button(false);
 
