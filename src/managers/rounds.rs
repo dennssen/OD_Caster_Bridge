@@ -25,6 +25,11 @@ impl RoundManager {
         }
     }
 
+    pub fn add_round(&mut self, round: Round) {
+        let index = self.archived_rounds.len();
+        self.archived_rounds.insert(index, round);
+    }
+
     pub fn add_override(&mut self, index: usize, round_override: RoundOverride) {
         self.overrides.insert(index, round_override);
     }
@@ -55,10 +60,12 @@ impl RoundManager {
         extended
     }
 
-    pub fn convert_rounds(&mut self, rounds: &IndexMap<usize, Round>) -> IndexMap<usize, Round> {
-        let mut converted_rounds: IndexMap<usize, Round> = IndexMap::new();
-
+    pub fn save_rounds(&mut self, rounds: &IndexMap<usize, Round>) {
         self.pre_converted_rounds = rounds.clone();
+    }
+
+    pub fn convert_rounds(&self, rounds: &IndexMap<usize, Round>) -> IndexMap<usize, Round> {
+        let mut converted_rounds: IndexMap<usize, Round> = IndexMap::new();
 
         let all_rounds: IndexMap<usize, Round> = self.extend_archived_rounds(rounds);
 

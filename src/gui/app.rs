@@ -12,6 +12,7 @@ use crate::managers::rounds::{RoundManager, RoundOverride};
 use crate::ws::state::{GameState, Round};
 
 enum RoundAction {
+    Create,
     Override(Round),
     Delete,
     None
@@ -35,7 +36,7 @@ pub struct AppState {
 
 pub struct OverlayProxyApp {
     state: Arc<RwLock<AppState>>,
-    selected_round: usize,
+    selected_round: i32,
     window_position: Option<Pos2>,
     first_frame: bool,
 }
@@ -44,7 +45,7 @@ impl OverlayProxyApp {
     pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
         Self {
             state,
-            selected_round: 1,
+            selected_round: -1,
             window_position: None,
             first_frame: true,
         }
@@ -137,7 +138,7 @@ impl eframe::App for OverlayProxyApp {
                                 egui::TextStyle::Body,
                                 egui::FontId::new(10.0, egui::FontFamily::Proportional)
                             );
-                            
+
                             ui.add(widgets::TinyTextEdit::single_line(
                                 "Match Host",
                                 &mut state.game_state.match_data.host
@@ -223,11 +224,11 @@ impl eframe::App for OverlayProxyApp {
 
                             ui.collapsing("Rounds", |ui| {
                                 if let Some(api) = state.game_state.camera_api.as_ref() {
-                                    let rounds: &IndexMap<usize, Round> = &api.rounds;
+                                    let rounds: &IndexMap<usize, Round> = &state.round_manager.convert_rounds(&api.rounds);
 
-                                    ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round));
+                                    ui.add(widgets::RoundsPicker::new(rounds, &mut (self.selected_round as usize)));
 
-                                    let round_action: RoundAction = if let Some(round) = rounds.get(&self.selected_round) {
+                                    let round_action: RoundAction = if let Some(round) = rounds.get(&(self.selected_round as usize)) {
                                         let mut round = round.clone();
                                         let mut changed: bool = false;
                                         let mut should_delete: bool = false;
@@ -264,16 +265,22 @@ impl eframe::App for OverlayProxyApp {
                                         } else {
                                             RoundAction::None
                                         }
-                                    } else {
+                                    } else if self.selected_round == -1 {
                                         RoundAction::None
+                                    } else {
+                                        RoundAction::Create
                                     };
 
                                     match round_action {
+                                        RoundAction::Create => {
+                                            println!("Created new round");
+                                            state.round_manager.add_round(Round::default());
+                                        }
                                         RoundAction::Override(round) => {
-                                            state.round_manager.add_override(self.selected_round, RoundOverride::Replace(round));
+                                            state.round_manager.add_override(self.selected_round as usize, RoundOverride::Replace(round));
                                         }
                                         RoundAction::Delete => {
-                                            state.round_manager.add_override(self.selected_round, RoundOverride::Delete);
+                                            state.round_manager.add_override(self.selected_round as usize, RoundOverride::Delete);
                                         }
                                         RoundAction::None => {}
                                     }

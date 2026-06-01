@@ -133,16 +133,45 @@ pub struct ShotInfo {
     pub shot_distance_meters: f64,
 }
 
+impl Default for ShotInfo {
+    fn default() -> Self {
+        Self {
+            shooter: String::new(),
+            assister: String::new(),
+            team: -1,
+            shot_speed: 0.0,
+            shot_distance_meters: 0.0
+        }
+    }
+}
+
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Round {
     pub home: i32,
     pub away: i32,
 }
 
+impl Default for Round {
+    fn default() -> Self {
+        Self {
+            home: 0,
+            away: 0
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OverlayTeam {
     #[serde(deserialize_with = "deserialize_players")]
     pub players: IndexMap<String, Stats>,
+}
+
+impl Default for OverlayTeam {
+    fn default() -> Self {
+        Self {
+            players: IndexMap::new()
+        }
+    }
 }
 
 fn deserialize_players<'de, D>(deserializer: D) -> Result<IndexMap<String, Stats>, D::Error>
@@ -185,6 +214,23 @@ pub struct CameraApi {
     pub best_of: i32,
     #[serde(rename = "matchLengthSeconds")]
     pub match_length_seconds: i32,
+}
+
+impl Default for CameraApi {
+    fn default() -> Self {
+        Self {
+            gamemode_id: String::new(),
+            home: OverlayTeam::default(),
+            away: OverlayTeam::default(),
+            rounds: IndexMap::new(),
+            followed_player: String::new(),
+            last_shot_info: ShotInfo::default(),
+            is_grace_period: false,
+            is_overtime: false,
+            best_of: 3,
+            match_length_seconds: 300
+        }
+    }
 }
 
 fn deserialize_rounds<'de, D>(deserializer: D) -> Result<IndexMap<usize, Round>, D::Error>

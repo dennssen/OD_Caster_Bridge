@@ -171,6 +171,13 @@ impl<'v> egui::Widget for RoundsPicker<'v> {
                             *self.selected_value = *k
                         }
                     }
+                    if ui.add_sized(
+                        [ui.available_width(), 0.0],
+                        egui::Button::new("+")
+                    ).clicked() {
+                        *self.selected_value = self.rounds.keys().max().map_or(0, |k| k + 1);
+                        println!("{}", self.selected_value);
+                    }
                 });
             }).response
     }

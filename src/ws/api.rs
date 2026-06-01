@@ -203,6 +203,7 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
                     }
                 }
 
+                s.round_manager.save_rounds(&camera_config.api.rounds);
                 camera_config.api.rounds = s.round_manager.convert_rounds(&camera_config.api.rounds);
 
                 s.game_state.camera_api = Some(camera_config.api);
