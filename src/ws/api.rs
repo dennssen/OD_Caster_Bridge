@@ -82,6 +82,7 @@ async fn handle_game_data(client: &Client, state: &Arc<RwLock<AppState>>) -> boo
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to poll spectator API: {}", e);
             false
         }
@@ -103,6 +104,7 @@ async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) -> boo
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to poll spectator API: {}", e);
             false
         }
@@ -134,6 +136,7 @@ async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to get gamemode: {}: {}", subscribed_slot_id, e);
             false
         }
@@ -155,6 +158,7 @@ async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) -> bool 
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to get cameras: {}", e);
             false
         }
@@ -211,6 +215,7 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to get subscribed camera: {}", e);
             false
         }
