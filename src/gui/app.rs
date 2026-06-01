@@ -13,8 +13,8 @@ use crate::ws::state::{GameState, Round};
 
 enum RoundAction {
     Create,
-    Override(Round),
-    Delete,
+    Override(usize, Round),
+    Delete(usize),
     None
 }
 
@@ -36,7 +36,7 @@ pub struct AppState {
 
 pub struct OverlayProxyApp {
     state: Arc<RwLock<AppState>>,
-    selected_round: i32,
+    selected_round: Option<usize>,
     window_position: Option<Pos2>,
     first_frame: bool,
 }
@@ -45,7 +45,7 @@ impl OverlayProxyApp {
     pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
         Self {
             state,
-            selected_round: -1,
+            selected_round: None,
             window_position: None,
             first_frame: true,
         }
@@ -224,51 +224,55 @@ impl eframe::App for OverlayProxyApp {
 
                             ui.collapsing("Rounds", |ui| {
                                 if let Some(api) = state.game_state.camera_api.as_ref() {
+                                    let rounds_amount: usize = state.round_manager.get_total_rounds_amount(&api.rounds);
                                     let rounds: &IndexMap<usize, Round> = &state.round_manager.convert_rounds(&api.rounds);
 
-                                    ui.add(widgets::RoundsPicker::new(rounds, &mut (self.selected_round as usize)));
+                                    ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round, rounds_amount));
 
-                                    let round_action: RoundAction = if let Some(round) = rounds.get(&(self.selected_round as usize)) {
-                                        let mut round = round.clone();
-                                        let mut changed: bool = false;
-                                        let mut should_delete: bool = false;
+                                    let round_action: RoundAction = if let Some(selected_round) = &self.selected_round {
+                                        if let Some(round) = rounds.get(selected_round) {
+                                            let mut round = round.clone();
+                                            let mut changed: bool = false;
+                                            let mut should_delete: bool = false;
 
-                                        ui.separator();
-                                        ui.horizontal(|ui| {
-                                            ui.vertical(|ui| {
-                                                ui.label("Home");
-                                                if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
-                                                    changed = true;
+                                            ui.separator();
+                                            ui.horizontal(|ui| {
+                                                ui.vertical(|ui| {
+                                                    ui.label("Home");
+                                                    if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
+                                                        changed = true;
+                                                    }
+                                                });
+
+                                                ui.add_space(20.0);
+
+                                                ui.vertical(|ui| {
+                                                    ui.label("Away");
+                                                    if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
+                                                        changed = true;
+                                                    }
+                                                });
+
+                                                ui.add_space(20.0);
+
+                                                if ui.button("Delete").clicked() {
+                                                    should_delete = true;
                                                 }
                                             });
 
-                                            ui.add_space(20.0);
-
-                                            ui.vertical(|ui| {
-                                                ui.label("Away");
-                                                if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
-                                                    changed = true;
-                                                }
-                                            });
-
-                                            ui.add_space(20.0);
-
-                                            if ui.button("Delete").clicked() {
-                                                should_delete = true;
+                                            if should_delete {
+                                                RoundAction::Delete(*selected_round)
+                                            } else if changed {
+                                                RoundAction::Override(*selected_round, Round {home: round.home, away: round.away})
+                                            } else {
+                                                RoundAction::None
                                             }
-                                        });
-
-                                        if should_delete {
-                                            RoundAction::Delete
-                                        } else if changed {
-                                            RoundAction::Override(Round {home: round.home, away: round.away})
                                         } else {
-                                            RoundAction::None
+                                            println!("{:?}", rounds.keys().collect::<Vec<_>>());
+                                            RoundAction::Create
                                         }
-                                    } else if self.selected_round == -1 {
-                                        RoundAction::None
                                     } else {
-                                        RoundAction::Create
+                                        RoundAction::None
                                     };
 
                                     match round_action {
@@ -276,11 +280,12 @@ impl eframe::App for OverlayProxyApp {
                                             println!("Created new round");
                                             state.round_manager.add_round(Round::default());
                                         }
-                                        RoundAction::Override(round) => {
-                                            state.round_manager.add_override(self.selected_round as usize, RoundOverride::Replace(round));
+                                        RoundAction::Override(round_index, round) => {
+                                            state.round_manager.add_override(round_index, RoundOverride::Replace(round));
                                         }
-                                        RoundAction::Delete => {
-                                            state.round_manager.add_override(self.selected_round as usize, RoundOverride::Delete);
+                                        RoundAction::Delete(round_index) => {
+                                            self.selected_round = None;
+                                            state.round_manager.add_override(round_index, RoundOverride::Delete);
                                         }
                                         RoundAction::None => {}
                                     }

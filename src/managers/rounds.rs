@@ -87,6 +87,10 @@ impl RoundManager {
         converted_rounds
     }
 
+    pub fn get_total_rounds_amount(&self, rounds: &IndexMap<usize, Round>) -> usize {
+        self.archived_rounds.iter().count() + rounds.iter().count()
+    }
+
     pub fn has_wiped(&self, new_rounds: &IndexMap<usize, Round>) -> bool {
         new_rounds.len() < self.pre_converted_rounds.len()
     }
