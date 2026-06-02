@@ -103,7 +103,7 @@ impl GamemodeTeam {
         Self {
             score: 0,
             rounds_won: 0,
-            players: vec![SimplePlayer {player_id: 1, player_name: String::from("Player1"), position: Vec3 {x: 0.0, y: 0.0, z: 0.0}}],
+            players: vec![],
             team_color
         }
     }
@@ -181,6 +181,16 @@ pub struct Stats {
     pub assists: i32,
 }
 
+impl Default for Stats {
+    fn default() -> Self {
+        Self {
+            goals: 0,
+            saves: 0,
+            assists: 0
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ShotInfo {
     pub shooter: String,
@@ -225,10 +235,27 @@ pub struct OverlayTeam {
     pub players: IndexMap<String, Stats>,
 }
 
-impl Default for OverlayTeam {
-    fn default() -> Self {
+
+impl OverlayTeam {
+    pub fn home_team() -> Self {
         Self {
-            players: IndexMap::new()
+            players: IndexMap::from([
+                ("Player1".to_string(), Stats::default()),
+                ("Player2".to_string(), Stats::default()),
+                ("Player3".to_string(), Stats::default()),
+                ("Player4".to_string(), Stats::default()),
+            ]),
+        }
+    }
+
+    pub fn away_team() -> Self {
+        Self {
+            players: IndexMap::from([
+                ("PlayerWithLongNameAsh".to_string(), Stats::default()),
+                ("Player6".to_string(), Stats::default()),
+                ("Player7".to_string(), Stats::default()),
+                ("Player8".to_string(), Stats::default()),
+            ]),
         }
     }
 }
@@ -279,8 +306,8 @@ impl Default for CameraApi {
     fn default() -> Self {
         Self {
             gamemode_id: String::new(),
-            home: OverlayTeam::default(),
-            away: OverlayTeam::default(),
+            home: OverlayTeam::home_team(),
+            away: OverlayTeam::away_team(),
             rounds: IndexMap::new(),
             followed_player: String::new(),
             last_shot_info: ShotInfo::default(),
