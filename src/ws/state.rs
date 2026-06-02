@@ -98,6 +98,51 @@ pub struct GamemodeTeam {
     pub team_color: TeamColor,
 }
 
+impl GamemodeTeam {
+    fn default_team(team_color: TeamColor) -> Self {
+        Self {
+            score: 0,
+            rounds_won: 0,
+            players: vec![SimplePlayer {player_id: 1, player_name: String::from("Player1"), position: Vec3 {x: 0.0, y: 0.0, z: 0.0}}],
+            team_color
+        }
+    }
+    
+    pub fn home_team() -> Self {
+        Self::default_team(TeamColor {
+            primary: Color {
+                r: 223,
+                g: 45,
+                b: 82,
+                a: 255
+            },
+            secondary: Color {
+                r: 223,
+                g: 45,
+                b: 82,
+                a: 255
+            }
+        })
+    }
+
+    pub fn away_team() -> Self {
+        Self::default_team(TeamColor {
+            primary: Color {
+                r: 9,
+                g: 114,
+                b: 213,
+                a: 255
+            },
+            secondary: Color {
+                r: 9,
+                g: 114,
+                b: 213,
+                a: 255
+            }
+        })
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct GamemodeData {
     #[serde(rename = "slotId")]
@@ -113,6 +158,20 @@ pub struct GamemodeData {
     #[serde(rename = "useBestOf")]
     pub use_best_of: bool,
     pub teams: Vec<GamemodeTeam>,
+}
+
+impl Default for GamemodeData {
+    fn default() -> Self {
+        Self {
+            slot_id: String::from("gamma01"),
+            time_seconds: 300.0,
+            secondary_time_seconds: 0.0,
+            is_game_running: false,
+            total_rounds: 3,
+            use_best_of: true,
+            teams: vec![GamemodeTeam::home_team(), GamemodeTeam::away_team()]
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]

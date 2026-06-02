@@ -15,7 +15,7 @@ use crate::ws::{server, api};
 use crate::gui::app::{OverlayProxyApp, AppState};
 use crate::managers::appdata::AppData;
 use crate::managers::rounds::RoundManager;
-use crate::ws::state::{CameraApi, CasterTeams, GameState, MatchData};
+use crate::ws::state::{CameraApi, CasterTeams, GameState, GamemodeData, MatchData};
 
 fn main() -> eframe::Result {
     let app_data = AppData::get_or_init();
@@ -26,7 +26,16 @@ fn main() -> eframe::Result {
         game_state: GameState {
             game_data: None,
             gamemodes: vec![],
-            selected_gamemode: None,
+            selected_gamemode: {
+                #[cfg(debug_assertions)]
+                {
+                    Some(GamemodeData::default())
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    None
+                }
+            },
             cameras: vec![],
             camera_api: {
                 #[cfg(debug_assertions)]
