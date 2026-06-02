@@ -60,7 +60,16 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
 
         {
             let s = state.read().await;
-            let _ = s.broadcast_tx.send(s.game_state.clone());
+            let mut game_state = s.game_state.clone();
+
+            // On linux polling does not work, therefore we need to convert rounds on sending
+            // instead of on recieveing
+            #[cfg(not(target_os = "windows"))]
+            if let Some(api) = &mut game_state.camera_api {
+                api.rounds = s.round_manager.convert_rounds(&api.rounds);
+            }
+
+            let _ = s.broadcast_tx.send(game_state);
         }
 
         tokio::time::sleep(tokio::time::Duration::from_millis(interval)).await;

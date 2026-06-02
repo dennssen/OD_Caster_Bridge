@@ -107,7 +107,7 @@ impl GamemodeTeam {
             team_color
         }
     }
-    
+
     pub fn home_team() -> Self {
         Self::default_team(TeamColor {
             primary: Color {
