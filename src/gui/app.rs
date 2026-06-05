@@ -34,14 +34,14 @@ pub struct AppState {
     pub broadcast_tx: tokio::sync::broadcast::Sender<GameState>,
 }
 
-pub struct OverlayProxyApp {
+pub struct GUIData {
     state: Arc<RwLock<AppState>>,
     selected_round: Option<usize>,
     window_position: Option<Pos2>,
     first_frame: bool,
 }
 
-impl OverlayProxyApp {
+impl GUIData {
     pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
         Self {
             state,
@@ -52,7 +52,7 @@ impl OverlayProxyApp {
     }
 }
 
-impl eframe::App for OverlayProxyApp {
+impl eframe::App for GUIData {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.first_frame {
             ctx.set_pixels_per_point(1.5);

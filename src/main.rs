@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use eframe::egui;
 use egui_extras::install_image_loaders;
 use crate::ws::{server, api};
-use crate::gui::app::{OverlayProxyApp, AppState};
+use crate::gui::app::{GUIData, AppState};
 use crate::managers::appdata::AppData;
 use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CameraApi, CasterTeams, GameState, GamemodeData, MatchData};
@@ -106,7 +106,7 @@ fn main() -> eframe::Result {
                 style.spacing.item_spacing.x = 2.0;
             });
             install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(OverlayProxyApp::new(state)))
+            Ok(Box::new(GUIData::new(state)))
         }),
     )
 }
