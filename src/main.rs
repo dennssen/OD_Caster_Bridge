@@ -54,6 +54,7 @@ fn main() -> eframe::Result {
         camera_api_id: app_data.camera_api_id,
         
         round_manager: RoundManager::new(),
+        selected_round: None,
         
         connected_clients: 0,
         spectator_connection: false,

@@ -60,13 +60,13 @@ impl RoundManager {
         extended
     }
 
-    pub fn save_rounds(&mut self, rounds: &IndexMap<usize, Round>) {
+    pub fn save_pre_converted_rounds(&mut self, rounds: &IndexMap<usize, Round>) {
         self.pre_converted_rounds = rounds.clone();
     }
 
-    pub fn convert_rounds(&self, rounds: &IndexMap<usize, Round>) -> IndexMap<usize, Round> {
+    pub fn convert_rounds(&mut self, rounds: &IndexMap<usize, Round>) -> IndexMap<usize, Round> {
         let mut converted_rounds: IndexMap<usize, Round> = IndexMap::new();
-
+        
         let all_rounds: IndexMap<usize, Round> = self.extend_archived_rounds(rounds);
 
         for (i, round) in all_rounds.iter() {
@@ -87,8 +87,12 @@ impl RoundManager {
         converted_rounds
     }
 
-    pub fn get_total_rounds_amount(&self, rounds: &IndexMap<usize, Round>) -> usize {
-        self.archived_rounds.iter().count() + rounds.iter().count()
+    pub fn update_rounds(&mut self) -> IndexMap<usize, Round> {
+        self.convert_rounds(&self.pre_converted_rounds.clone())
+    }
+
+    pub fn get_total_rounds_amount(&self) -> usize {
+        self.archived_rounds.iter().count() + self.pre_converted_rounds.iter().count()
     }
 
     pub fn has_wiped(&self, new_rounds: &IndexMap<usize, Round>) -> bool {

@@ -24,6 +24,7 @@ pub struct AppState {
     pub camera_api_id: String,
 
     pub round_manager: RoundManager,
+    pub selected_round: Option<usize>,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -36,7 +37,6 @@ pub struct AppState {
 
 pub struct GUIData {
     state: Arc<RwLock<AppState>>,
-    selected_round: Option<usize>,
     window_position: Option<Pos2>,
     first_frame: bool,
 }
@@ -45,7 +45,6 @@ impl GUIData {
     pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
         Self {
             state,
-            selected_round: None,
             window_position: None,
             first_frame: true,
         }
@@ -225,12 +224,12 @@ impl eframe::App for GUIData {
 
                             ui.collapsing("Rounds", |ui| {
                                 if let Some(api) = state.game_state.camera_api.as_ref() {
-                                    let rounds_amount: usize = state.round_manager.get_total_rounds_amount(&api.rounds);
-                                    let rounds: &IndexMap<usize, Round> = &state.round_manager.convert_rounds(&api.rounds);
+                                    let rounds_amount: usize = state.round_manager.get_total_rounds_amount();
+                                    let rounds: &IndexMap<usize, Round> = &state.round_manager.update_rounds();
 
-                                    ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round, rounds_amount));
+                                    ui.add(widgets::RoundsPicker::new(rounds, &mut state.selected_round, rounds_amount));
 
-                                    let round_action: RoundAction = if let Some(selected_round) = &self.selected_round {
+                                    let round_action: RoundAction = if let Some(selected_round) = &state.selected_round {
                                         if let Some(round) = rounds.get(selected_round) {
                                             let mut round = round.clone();
                                             let mut changed: bool = false;
@@ -269,7 +268,7 @@ impl eframe::App for GUIData {
                                                 RoundAction::None
                                             }
                                         } else {
-                                            println!("{:?}", rounds.keys().collect::<Vec<_>>());
+                                            println!("{} | {:?}", selected_round, rounds.keys().collect::<Vec<_>>());
                                             RoundAction::Create
                                         }
                                     } else {
@@ -280,12 +279,13 @@ impl eframe::App for GUIData {
                                         RoundAction::Create => {
                                             println!("Created new round");
                                             state.round_manager.add_round(Round::default());
+
                                         }
                                         RoundAction::Override(round_index, round) => {
                                             state.round_manager.add_override(round_index, RoundOverride::Replace(round));
                                         }
                                         RoundAction::Delete(round_index) => {
-                                            self.selected_round = None;
+                                            state.selected_round = None;
                                             state.round_manager.add_override(round_index, RoundOverride::Delete);
                                         }
                                         RoundAction::None => {}

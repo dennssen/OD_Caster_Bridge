@@ -213,10 +213,11 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
                         println!("winner, removing overrides");
                         s.round_manager.clear_archives();
                         s.round_manager.clear_overrides();
+                        s.selected_round = None;
                     }
                 }
-
-                s.round_manager.save_rounds(&camera_config.api.rounds);
+                
+                s.round_manager.save_pre_converted_rounds(&camera_config.api.rounds);
                 camera_config.api.rounds = s.round_manager.convert_rounds(&camera_config.api.rounds);
 
                 s.game_state.camera_api = Some(camera_config.api);
