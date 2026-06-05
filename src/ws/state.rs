@@ -98,6 +98,51 @@ pub struct GamemodeTeam {
     pub team_color: TeamColor,
 }
 
+impl GamemodeTeam {
+    fn default_team(team_color: TeamColor) -> Self {
+        Self {
+            score: 0,
+            rounds_won: 0,
+            players: vec![],
+            team_color
+        }
+    }
+
+    pub fn home_team() -> Self {
+        Self::default_team(TeamColor {
+            primary: Color {
+                r: 223,
+                g: 45,
+                b: 82,
+                a: 255
+            },
+            secondary: Color {
+                r: 223,
+                g: 45,
+                b: 82,
+                a: 255
+            }
+        })
+    }
+
+    pub fn away_team() -> Self {
+        Self::default_team(TeamColor {
+            primary: Color {
+                r: 9,
+                g: 114,
+                b: 213,
+                a: 255
+            },
+            secondary: Color {
+                r: 9,
+                g: 114,
+                b: 213,
+                a: 255
+            }
+        })
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct GamemodeData {
     #[serde(rename = "slotId")]
@@ -115,11 +160,35 @@ pub struct GamemodeData {
     pub teams: Vec<GamemodeTeam>,
 }
 
+impl Default for GamemodeData {
+    fn default() -> Self {
+        Self {
+            slot_id: String::from("gamma01"),
+            time_seconds: 300.0,
+            secondary_time_seconds: 0.0,
+            is_game_running: false,
+            total_rounds: 3,
+            use_best_of: true,
+            teams: vec![GamemodeTeam::home_team(), GamemodeTeam::away_team()]
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Stats {
     pub goals: i32,
     pub saves: i32,
     pub assists: i32,
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        Self {
+            goals: 0,
+            saves: 0,
+            assists: 0
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -133,16 +202,62 @@ pub struct ShotInfo {
     pub shot_distance_meters: f64,
 }
 
+impl Default for ShotInfo {
+    fn default() -> Self {
+        Self {
+            shooter: String::new(),
+            assister: String::new(),
+            team: -1,
+            shot_speed: 0.0,
+            shot_distance_meters: 0.0
+        }
+    }
+}
+
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Round {
     pub home: i32,
     pub away: i32,
 }
 
+impl Default for Round {
+    fn default() -> Self {
+        Self {
+            home: 0,
+            away: 0
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OverlayTeam {
     #[serde(deserialize_with = "deserialize_players")]
     pub players: IndexMap<String, Stats>,
+}
+
+
+impl OverlayTeam {
+    pub fn home_team() -> Self {
+        Self {
+            players: IndexMap::from([
+                ("Player1".to_string(), Stats::default()),
+                ("Player2".to_string(), Stats::default()),
+                ("Player3".to_string(), Stats::default()),
+                ("Player4".to_string(), Stats::default()),
+            ]),
+        }
+    }
+
+    pub fn away_team() -> Self {
+        Self {
+            players: IndexMap::from([
+                ("PlayerWithLongNameAsh".to_string(), Stats::default()),
+                ("Player6".to_string(), Stats::default()),
+                ("Player7".to_string(), Stats::default()),
+                ("Player8".to_string(), Stats::default()),
+            ]),
+        }
+    }
 }
 
 fn deserialize_players<'de, D>(deserializer: D) -> Result<IndexMap<String, Stats>, D::Error>
@@ -185,6 +300,23 @@ pub struct CameraApi {
     pub best_of: i32,
     #[serde(rename = "matchLengthSeconds")]
     pub match_length_seconds: i32,
+}
+
+impl Default for CameraApi {
+    fn default() -> Self {
+        Self {
+            gamemode_id: String::new(),
+            home: OverlayTeam::home_team(),
+            away: OverlayTeam::away_team(),
+            rounds: IndexMap::new(),
+            followed_player: String::new(),
+            last_shot_info: ShotInfo::default(),
+            is_grace_period: false,
+            is_overtime: false,
+            best_of: 3,
+            match_length_seconds: 300
+        }
+    }
 }
 
 fn deserialize_rounds<'de, D>(deserializer: D) -> Result<IndexMap<usize, Round>, D::Error>
@@ -235,6 +367,23 @@ impl Default for CasterTeams {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+pub struct MatchData {
+    pub host: String,
+    pub name: String,
+    pub stage: String,
+}
+
+impl Default for MatchData {
+    fn default() -> Self {
+        Self {
+            host: String::default(),
+            name: String::default(),
+            stage: String::default()
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GameState {
     #[serde(rename = "gameData")]
     pub game_data: Option<GameData>,
@@ -246,4 +395,6 @@ pub struct GameState {
     pub camera_api: Option<CameraApi>,
     #[serde(rename = "casterTeams")]
     pub caster_teams: CasterTeams,
+    #[serde(rename = "matchData")]
+    pub match_data: MatchData,
 }

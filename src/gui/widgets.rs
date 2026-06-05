@@ -140,14 +140,16 @@ impl<'v> egui::Widget for PlayerList {
 
 pub struct RoundsPicker<'v> {
     rounds: &'v IndexMap<usize, Round>,
-    selected_value: &'v mut usize
+    selected_value: &'v mut Option<usize>,
+    new_round_index: usize,
 }
 
 impl<'v> RoundsPicker<'v> {
-    pub fn new(rounds: &'v IndexMap<usize, Round>, selected_value: &'v mut usize) -> Self {
+    pub fn new(rounds: &'v IndexMap<usize, Round>, selected_value: &'v mut Option<usize>, new_round_index: usize) -> Self {
         Self {
             rounds,
-            selected_value
+            selected_value,
+            new_round_index,
         }
     }
 }
@@ -166,10 +168,17 @@ impl<'v> egui::Widget for RoundsPicker<'v> {
 
                         if ui.add_sized(
                             [ui.available_width(), 0.0],
-                            egui::Button::selectable(self.selected_value == k, format!("round {}", i+1))
+                            egui::Button::selectable(self.selected_value.is_some() && self.selected_value.unwrap() == *k, format!("round {}", i+1))
                         ).clicked() {
-                            *self.selected_value = *k
+                            *self.selected_value = Some(*k)
                         }
+                    }
+                    if ui.add_sized(
+                        [ui.available_width(), 0.0],
+                        egui::Button::new("+")
+                    ).clicked() {
+                        *self.selected_value = Some(self.new_round_index);
+                        println!("{}", self.new_round_index);
                     }
                 });
             }).response

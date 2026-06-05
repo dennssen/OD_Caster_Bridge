@@ -12,8 +12,9 @@ use crate::managers::rounds::{RoundManager, RoundOverride};
 use crate::ws::state::{GameState, Round};
 
 enum RoundAction {
-    Override(Round),
-    Delete,
+    Create,
+    Override(usize, Round),
+    Delete(usize),
     None
 }
 
@@ -23,6 +24,7 @@ pub struct AppState {
     pub camera_api_id: String,
 
     pub round_manager: RoundManager,
+    pub selected_round: Option<usize>,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -33,25 +35,23 @@ pub struct AppState {
     pub broadcast_tx: tokio::sync::broadcast::Sender<GameState>,
 }
 
-pub struct OverlayProxyApp {
+pub struct GUIData {
     state: Arc<RwLock<AppState>>,
-    selected_round: usize,
     window_position: Option<Pos2>,
     first_frame: bool,
 }
 
-impl OverlayProxyApp {
+impl GUIData {
     pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
         Self {
             state,
-            selected_round: 1,
             window_position: None,
             first_frame: true,
         }
     }
 }
 
-impl eframe::App for OverlayProxyApp {
+impl eframe::App for GUIData {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.first_frame {
             ctx.set_pixels_per_point(1.5);
@@ -62,7 +62,8 @@ impl eframe::App for OverlayProxyApp {
 
         let outer_rect = ctx.input(|i| i.viewport().outer_rect);
         if let Some(outer_rect) = outer_rect {
-            let position = outer_rect.left_top();
+            let native_ppp = ctx.input(|i| i.viewport().native_pixels_per_point.unwrap_or(1.0));
+            let position = outer_rect.left_top() * (ctx.pixels_per_point() / native_ppp);
             self.window_position = Some(position);
         }
 
@@ -127,143 +128,170 @@ impl eframe::App for OverlayProxyApp {
 
                     ui.add_space(10.0);
 
-                    ui.label("Team Data");
+                    ui.collapsing("Match Data", |ui| {
+                        ui.scope(|ui| {
+                            ui.style_mut().text_styles.insert(
+                                egui::TextStyle::Button,
+                                egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                            );
+                            ui.style_mut().text_styles.insert(
+                                egui::TextStyle::Body,
+                                egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                            );
 
-                    ui.scope(|ui| {
-                        ui.style_mut().text_styles.insert(
-                            egui::TextStyle::Button,
-                            egui::FontId::new(10.0, egui::FontFamily::Proportional)
-                        );
-                        ui.style_mut().text_styles.insert(
-                            egui::TextStyle::Body,
-                            egui::FontId::new(10.0, egui::FontFamily::Proportional)
-                        );
-
-                        ui.collapsing("Home Team", |ui| {
                             ui.add(widgets::TinyTextEdit::single_line(
-                                "Team Name",
-                                &mut state.game_state.caster_teams.home.name
+                                "Match Host",
+                                &mut state.game_state.match_data.host
                             ).with_desired_width(100.0));
-                            ui.horizontal(|ui| {
-                                if ui.button("Image...").clicked() {
-                                    get_and_upload_logo(Team::Home(state.game_state.caster_teams.home.name.clone()), &mut state);
-                                }
-                                ui.label("Team Logo");
-                            });
-                            if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.home.logo_url) {
-                                if let Some(image_size) = get_image_size(texture) {
-                                    ui.horizontal(|ui| {
-                                        ui.add(
-                                            egui::Image::new(&state.game_state.caster_teams.home.logo_url)
-                                                .fit_to_exact_size(image_size)
-                                        );
-                                        if ui.button("X").clicked() {
-                                            state.game_state.caster_teams.home.logo_url = String::new();
-                                        }
-                                    });
-                                }
-                            }
-                            ui.label("Current Players");
-                            ui.add(widgets::PlayerList::list(
-                                if let Some(camera_api) = &state.game_state.camera_api {
-                                    camera_api.home.players.keys().cloned().collect()
-                                } else {
-                                    vec![]
-                                }
-                            ));
-                        });
-
-                        ui.collapsing("Away Team", |ui| {
                             ui.add(widgets::TinyTextEdit::single_line(
-                                "Team Name",
-                                &mut state.game_state.caster_teams.away.name
+                                "Match Name",
+                                &mut state.game_state.match_data.name
                             ).with_desired_width(100.0));
-                            ui.horizontal(|ui| {
-                                if ui.button("Image...").clicked() {
-                                    get_and_upload_logo(Team::Away(state.game_state.caster_teams.away.name.clone()), &mut state);
-                                }
-                                ui.label("Team Logo");
-                            });
-                            if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.away.logo_url) {
-                                if let Some(image_size) = get_image_size(texture) {
-                                    ui.horizontal(|ui| {
-                                        ui.add(
-                                            egui::Image::new(&state.game_state.caster_teams.away.logo_url)
-                                                .fit_to_exact_size(image_size)
-                                        );
-                                        if ui.button("X").clicked() {
-                                            state.game_state.caster_teams.away.logo_url = String::new();
-                                        }
-                                    });
-                                }
-                            }
-                            ui.label("Current Players");
-                            ui.add(widgets::PlayerList::list(
-                                if let Some(camera_api) = &state.game_state.camera_api {
-                                    camera_api.away.players.keys().cloned().collect()
-                                } else {
-                                    vec![]
-                                }
-                            ));
-                        });
+                            ui.add(widgets::TinyTextEdit::single_line(
+                                "Match Stage",
+                                &mut state.game_state.match_data.stage
+                            ).with_desired_width(100.0));
 
-                        ui.collapsing("Rounds", |ui| {
-                            if let Some(api) = state.game_state.camera_api.as_ref() {
-                                let rounds: &IndexMap<usize, Round> = &api.rounds;
+                            ui.spacing();
 
-                                ui.add(widgets::RoundsPicker::new(rounds, &mut self.selected_round));
-
-                                let round_action: RoundAction = if let Some(round) = rounds.get(&self.selected_round) {
-                                    let mut round = round.clone();
-                                    let mut changed: bool = false;
-                                    let mut should_delete: bool = false;
-
-                                    ui.separator();
-                                    ui.horizontal(|ui| {
-                                        ui.vertical(|ui| {
-                                            ui.label("Home");
-                                            if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
-                                                changed = true;
+                            ui.collapsing("Home Team", |ui| {
+                                ui.add(widgets::TinyTextEdit::single_line(
+                                    "Team Name",
+                                    &mut state.game_state.caster_teams.home.name
+                                ).with_desired_width(100.0));
+                                ui.horizontal(|ui| {
+                                    if ui.button("Image...").clicked() {
+                                        get_and_upload_logo(Team::Home(state.game_state.caster_teams.home.name.clone()), &mut state);
+                                    }
+                                    ui.label("Team Logo");
+                                });
+                                if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.home.logo_url) {
+                                    if let Some(image_size) = get_image_size(texture) {
+                                        ui.horizontal(|ui| {
+                                            ui.add(
+                                                egui::Image::new(&state.game_state.caster_teams.home.logo_url)
+                                                    .fit_to_exact_size(image_size)
+                                            );
+                                            if ui.button("X").clicked() {
+                                                state.game_state.caster_teams.home.logo_url = String::new();
                                             }
                                         });
+                                    }
+                                }
+                                ui.label("Current Players");
+                                ui.add(widgets::PlayerList::list(
+                                    if let Some(camera_api) = &state.game_state.camera_api {
+                                        camera_api.home.players.keys().cloned().collect()
+                                    } else {
+                                        vec![]
+                                    }
+                                ));
+                            });
 
-                                        ui.add_space(20.0);
-
-                                        ui.vertical(|ui| {
-                                            ui.label("Away");
-                                            if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
-                                                changed = true;
+                            ui.collapsing("Away Team", |ui| {
+                                ui.add(widgets::TinyTextEdit::single_line(
+                                    "Team Name",
+                                    &mut state.game_state.caster_teams.away.name
+                                ).with_desired_width(100.0));
+                                ui.horizontal(|ui| {
+                                    if ui.button("Image...").clicked() {
+                                        get_and_upload_logo(Team::Away(state.game_state.caster_teams.away.name.clone()), &mut state);
+                                    }
+                                    ui.label("Team Logo");
+                                });
+                                if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.away.logo_url) {
+                                    if let Some(image_size) = get_image_size(texture) {
+                                        ui.horizontal(|ui| {
+                                            ui.add(
+                                                egui::Image::new(&state.game_state.caster_teams.away.logo_url)
+                                                    .fit_to_exact_size(image_size)
+                                            );
+                                            if ui.button("X").clicked() {
+                                                state.game_state.caster_teams.away.logo_url = String::new();
                                             }
                                         });
+                                    }
+                                }
+                                ui.label("Current Players");
+                                ui.add(widgets::PlayerList::list(
+                                    if let Some(camera_api) = &state.game_state.camera_api {
+                                        camera_api.away.players.keys().cloned().collect()
+                                    } else {
+                                        vec![]
+                                    }
+                                ));
+                            });
 
-                                        ui.add_space(20.0);
+                            ui.collapsing("Rounds", |ui| {
+                                if let Some(api) = state.game_state.camera_api.as_ref() {
+                                    let rounds_amount: usize = state.round_manager.get_total_rounds_amount();
+                                    let rounds: &IndexMap<usize, Round> = &state.round_manager.update_rounds();
 
-                                        if ui.button("Delete").clicked() {
-                                            should_delete = true;
+                                    ui.add(widgets::RoundsPicker::new(rounds, &mut state.selected_round, rounds_amount));
+
+                                    let round_action: RoundAction = if let Some(selected_round) = &state.selected_round {
+                                        if let Some(round) = rounds.get(selected_round) {
+                                            let mut round = round.clone();
+                                            let mut changed: bool = false;
+                                            let mut should_delete: bool = false;
+
+                                            ui.separator();
+                                            ui.horizontal(|ui| {
+                                                ui.vertical(|ui| {
+                                                    ui.label("Home");
+                                                    if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
+                                                        changed = true;
+                                                    }
+                                                });
+
+                                                ui.add_space(20.0);
+
+                                                ui.vertical(|ui| {
+                                                    ui.label("Away");
+                                                    if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
+                                                        changed = true;
+                                                    }
+                                                });
+
+                                                ui.add_space(20.0);
+
+                                                if ui.button("Delete").clicked() {
+                                                    should_delete = true;
+                                                }
+                                            });
+
+                                            if should_delete {
+                                                RoundAction::Delete(*selected_round)
+                                            } else if changed {
+                                                RoundAction::Override(*selected_round, Round {home: round.home, away: round.away})
+                                            } else {
+                                                RoundAction::None
+                                            }
+                                        } else {
+                                            println!("{} | {:?}", selected_round, rounds.keys().collect::<Vec<_>>());
+                                            RoundAction::Create
                                         }
-                                    });
-
-                                    if should_delete {
-                                        RoundAction::Delete
-                                    } else if changed {
-                                        RoundAction::Override(Round {home: round.home, away: round.away})
                                     } else {
                                         RoundAction::None
-                                    }
-                                } else {
-                                    RoundAction::None
-                                };
+                                    };
 
-                                match round_action {
-                                    RoundAction::Override(round) => {
-                                        state.round_manager.add_override(self.selected_round, RoundOverride::Replace(round));
+                                    match round_action {
+                                        RoundAction::Create => {
+                                            println!("Created new round");
+                                            state.round_manager.add_round(Round::default());
+
+                                        }
+                                        RoundAction::Override(round_index, round) => {
+                                            state.round_manager.add_override(round_index, RoundOverride::Replace(round));
+                                        }
+                                        RoundAction::Delete(round_index) => {
+                                            state.selected_round = None;
+                                            state.round_manager.add_override(round_index, RoundOverride::Delete);
+                                        }
+                                        RoundAction::None => {}
                                     }
-                                    RoundAction::Delete => {
-                                        state.round_manager.add_override(self.selected_round, RoundOverride::Delete);
-                                    }
-                                    RoundAction::None => {}
                                 }
-                            }
+                            });
                         });
                     });
             });

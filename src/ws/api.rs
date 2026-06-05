@@ -60,7 +60,16 @@ pub async fn poll_game_data(state: Arc<RwLock<AppState>>) {
 
         {
             let s = state.read().await;
-            let _ = s.broadcast_tx.send(s.game_state.clone());
+            let mut game_state = s.game_state.clone();
+
+            // On linux polling does not work, therefore we need to convert rounds on sending
+            // instead of on recieveing
+            #[cfg(not(target_os = "windows"))]
+            if let Some(api) = &mut game_state.camera_api {
+                api.rounds = s.round_manager.convert_rounds(&api.rounds);
+            }
+
+            let _ = s.broadcast_tx.send(game_state);
         }
 
         tokio::time::sleep(tokio::time::Duration::from_millis(interval)).await;
@@ -82,6 +91,7 @@ async fn handle_game_data(client: &Client, state: &Arc<RwLock<AppState>>) -> boo
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to poll spectator API: {}", e);
             false
         }
@@ -103,6 +113,7 @@ async fn handle_gamemodes(client: &Client, state: &Arc<RwLock<AppState>>) -> boo
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to poll spectator API: {}", e);
             false
         }
@@ -134,6 +145,7 @@ async fn handle_subscribed_gamemode(response_data: &GamemodesResponse, client: &
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to get gamemode: {}: {}", subscribed_slot_id, e);
             false
         }
@@ -155,6 +167,7 @@ async fn handle_cameras(client: &Client, state: &Arc<RwLock<AppState>>) -> bool 
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to get cameras: {}", e);
             false
         }
@@ -200,9 +213,11 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
                         println!("winner, removing overrides");
                         s.round_manager.clear_archives();
                         s.round_manager.clear_overrides();
+                        s.selected_round = None;
                     }
                 }
-
+                
+                s.round_manager.save_pre_converted_rounds(&camera_config.api.rounds);
                 camera_config.api.rounds = s.round_manager.convert_rounds(&camera_config.api.rounds);
 
                 s.game_state.camera_api = Some(camera_config.api);
@@ -210,6 +225,7 @@ async fn handle_subscribed_config(cameras_response: &CamerasResponse, client: &C
             true
         }
         Err(e) => {
+            #[cfg(target_os = "windows")]
             eprintln!("Failed to get subscribed camera: {}", e);
             false
         }

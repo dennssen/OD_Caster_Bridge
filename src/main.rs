@@ -12,10 +12,10 @@ use tokio::sync::RwLock;
 use eframe::egui;
 use egui_extras::install_image_loaders;
 use crate::ws::{server, api};
-use crate::gui::app::{OverlayProxyApp, AppState};
+use crate::gui::app::{GUIData, AppState};
 use crate::managers::appdata::AppData;
 use crate::managers::rounds::RoundManager;
-use crate::ws::state::{CasterTeams, GameState};
+use crate::ws::state::{CameraApi, CasterTeams, GameState, GamemodeData, MatchData};
 
 fn main() -> eframe::Result {
     let app_data = AppData::get_or_init();
@@ -26,15 +26,35 @@ fn main() -> eframe::Result {
         game_state: GameState {
             game_data: None,
             gamemodes: vec![],
-            selected_gamemode: None,
+            selected_gamemode: {
+                #[cfg(debug_assertions)]
+                {
+                    Some(GamemodeData::default())
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    None
+                }
+            },
             cameras: vec![],
-            camera_api: None,
+            camera_api: {
+                #[cfg(debug_assertions)]
+                {
+                    Some(CameraApi::default())
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    None
+                }
+            },
             caster_teams: CasterTeams::default(),
+            match_data: MatchData::default(),
         },
         subscribed_gamemode_slot_id: String::new(),
         camera_api_id: app_data.camera_api_id,
         
         round_manager: RoundManager::new(),
+        selected_round: None,
         
         connected_clients: 0,
         spectator_connection: false,
@@ -66,7 +86,7 @@ fn main() -> eframe::Result {
     });
 
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([320.0, 780.0])
+        .with_inner_size([340.0, 780.0])
         .with_resizable(false)
         .with_maximize_button(false);
 
@@ -87,7 +107,7 @@ fn main() -> eframe::Result {
                 style.spacing.item_spacing.x = 2.0;
             });
             install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(OverlayProxyApp::new(state)))
+            Ok(Box::new(GUIData::new(state)))
         }),
     )
 }
