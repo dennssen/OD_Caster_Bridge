@@ -64,7 +64,7 @@ impl RoundManager {
         self.pre_converted_rounds = rounds.clone();
     }
 
-    pub fn convert_rounds(&mut self, rounds: &IndexMap<usize, Round>) -> IndexMap<usize, Round> {
+    pub fn convert_rounds(&self, rounds: &IndexMap<usize, Round>) -> IndexMap<usize, Round> {
         let mut converted_rounds: IndexMap<usize, Round> = IndexMap::new();
         
         let all_rounds: IndexMap<usize, Round> = self.extend_archived_rounds(rounds);
