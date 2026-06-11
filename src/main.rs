@@ -103,7 +103,7 @@ fn main() -> eframe::Result {
         "Caster Bridge",
         options,
         Box::new(|cc| {
-            cc.egui_ctx.style_mut(|style| {
+            cc.egui_ctx.global_style_mut(|style| {
                 style.spacing.item_spacing.x = 2.0;
             });
             install_image_loaders(&cc.egui_ctx);

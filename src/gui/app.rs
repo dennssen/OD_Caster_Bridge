@@ -1,9 +1,8 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use eframe::egui;
-use eframe::egui::{Pos2, RichText, SizeHint, TextureOptions};
+use eframe::{egui, Frame};
+use eframe::egui::{Id, Pos2, RichText, SizeHint, TextureOptions, Ui, ViewportBuilder, ViewportId};
 use eframe::egui::load::{TextureLoadResult, TexturePoll};
-use eframe::glow::Context;
 use indexmap::IndexMap;
 use crate::gui::widgets;
 use crate::http::logos::{get_and_upload_logo, Team};
@@ -52,22 +51,10 @@ impl GUIData {
 }
 
 impl eframe::App for GUIData {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.first_frame {
-            ctx.set_pixels_per_point(1.5);
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+        // ui.request_repaint();
 
-            self.first_frame = false;
-        }
-        ctx.request_repaint();
-
-        let outer_rect = ctx.input(|i| i.viewport().outer_rect);
-        if let Some(outer_rect) = outer_rect {
-            let native_ppp = ctx.input(|i| i.viewport().native_pixels_per_point.unwrap_or(1.0));
-            let position = outer_rect.left_top() * (ctx.pixels_per_point() / native_ppp);
-            self.window_position = Some(position);
-        }
-
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show_viewport(ui, |ui, _| {
@@ -128,6 +115,17 @@ impl eframe::App for GUIData {
 
                     ui.add_space(10.0);
 
+                    ui.scope(|ui| {
+                        ui.style_mut().text_styles.insert(
+                            egui::TextStyle::Button,
+                            egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                        );
+                        ui.style_mut().text_styles.insert(
+                            egui::TextStyle::Body,
+                            egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                        );
+                    });
+
                     ui.collapsing("Match Data", |ui| {
                         ui.scope(|ui| {
                             ui.style_mut().text_styles.insert(
@@ -165,7 +163,7 @@ impl eframe::App for GUIData {
                                     }
                                     ui.label("Team Logo");
                                 });
-                                if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.home.logo_url) {
+                                if let Ok(texture) = does_image_exist(ui, &state.game_state.caster_teams.home.logo_url) {
                                     if let Some(image_size) = get_image_size(texture) {
                                         ui.horizontal(|ui| {
                                             ui.add(
@@ -199,7 +197,7 @@ impl eframe::App for GUIData {
                                     }
                                     ui.label("Team Logo");
                                 });
-                                if let Ok(texture) = does_image_exist(ctx, &state.game_state.caster_teams.away.logo_url) {
+                                if let Ok(texture) = does_image_exist(ui, &state.game_state.caster_teams.away.logo_url) {
                                     if let Some(image_size) = get_image_size(texture) {
                                         ui.horizontal(|ui| {
                                             ui.add(
@@ -223,82 +221,96 @@ impl eframe::App for GUIData {
                             });
 
                             ui.collapsing("Rounds", |ui| {
-                                if let Some(api) = state.game_state.camera_api.as_ref() {
-                                    let rounds_amount: usize = state.round_manager.get_total_rounds_amount();
-                                    let rounds: &IndexMap<usize, Round> = &state.round_manager.update_rounds();
+                                let rounds_amount: usize = state.round_manager.get_total_rounds_amount();
+                                let rounds: &IndexMap<usize, Round> = &state.round_manager.update_rounds();
 
-                                    ui.add(widgets::RoundsPicker::new(rounds, &mut state.selected_round, rounds_amount));
+                                ui.add(widgets::RoundsPicker::new(rounds, &mut state.selected_round, rounds_amount));
 
-                                    let round_action: RoundAction = if let Some(selected_round) = &state.selected_round {
-                                        if let Some(round) = rounds.get(selected_round) {
-                                            let mut round = round.clone();
-                                            let mut changed: bool = false;
-                                            let mut should_delete: bool = false;
+                                let round_action: RoundAction = if let Some(selected_round) = &state.selected_round {
+                                    if let Some(round) = rounds.get(selected_round) {
+                                        let mut round = round.clone();
+                                        let mut changed: bool = false;
+                                        let mut should_delete: bool = false;
 
-                                            ui.separator();
-                                            ui.horizontal(|ui| {
-                                                ui.vertical(|ui| {
-                                                    ui.label("Home");
-                                                    if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
-                                                        changed = true;
-                                                    }
-                                                });
-
-                                                ui.add_space(20.0);
-
-                                                ui.vertical(|ui| {
-                                                    ui.label("Away");
-                                                    if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
-                                                        changed = true;
-                                                    }
-                                                });
-
-                                                ui.add_space(20.0);
-
-                                                if ui.button("Delete").clicked() {
-                                                    should_delete = true;
+                                        ui.separator();
+                                        ui.horizontal(|ui| {
+                                            ui.vertical(|ui| {
+                                                ui.label("Home");
+                                                if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
+                                                    changed = true;
                                                 }
                                             });
 
-                                            if should_delete {
-                                                RoundAction::Delete(*selected_round)
-                                            } else if changed {
-                                                RoundAction::Override(*selected_round, Round {home: round.home, away: round.away})
-                                            } else {
-                                                RoundAction::None
+                                            ui.add_space(20.0);
+
+                                            ui.vertical(|ui| {
+                                                ui.label("Away");
+                                                if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
+                                                    changed = true;
+                                                }
+                                            });
+
+                                            ui.add_space(20.0);
+
+                                            if ui.button("Delete").clicked() {
+                                                should_delete = true;
                                             }
+                                        });
+
+                                        if should_delete {
+                                            RoundAction::Delete(*selected_round)
+                                        } else if changed {
+                                            RoundAction::Override(*selected_round, Round {home: round.home, away: round.away})
                                         } else {
-                                            println!("{} | {:?}", selected_round, rounds.keys().collect::<Vec<_>>());
-                                            RoundAction::Create
+                                            RoundAction::None
                                         }
                                     } else {
-                                        RoundAction::None
-                                    };
-
-                                    match round_action {
-                                        RoundAction::Create => {
-                                            println!("Created new round");
-                                            state.round_manager.add_round(Round::default());
-
-                                        }
-                                        RoundAction::Override(round_index, round) => {
-                                            state.round_manager.add_override(round_index, RoundOverride::Replace(round));
-                                        }
-                                        RoundAction::Delete(round_index) => {
-                                            state.selected_round = None;
-                                            state.round_manager.add_override(round_index, RoundOverride::Delete);
-                                        }
-                                        RoundAction::None => {}
+                                        println!("{} | {:?}", selected_round, rounds.keys().collect::<Vec<_>>());
+                                        RoundAction::Create
                                     }
+                                } else {
+                                    RoundAction::None
+                                };
+
+                                match round_action {
+                                    RoundAction::Create => {
+                                        println!("Created new round");
+                                        state.round_manager.add_round(Round::default());
+
+                                    }
+                                    RoundAction::Override(round_index, round) => {
+                                        state.round_manager.add_override(round_index, RoundOverride::Replace(round));
+                                    }
+                                    RoundAction::Delete(round_index) => {
+                                        state.selected_round = None;
+                                        state.round_manager.add_override(round_index, RoundOverride::Delete);
+                                    }
+                                    RoundAction::None => {}
                                 }
                             });
                         });
                     });
-            });
+                });
         });
     }
 
-    fn on_exit(&mut self, _gl: Option<&Context>) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+        if self.first_frame {
+            ctx.set_pixels_per_point(1.5);
+
+            self.first_frame = false;
+        }
+
+        let outer_rect = ctx.input(|i| i.viewport().outer_rect);
+        if let Some(outer_rect) = outer_rect {
+            let native_ppp = ctx.input(|i| i.viewport().native_pixels_per_point.unwrap_or(1.0));
+            let position = outer_rect.left_top() * (ctx.pixels_per_point() / native_ppp);
+            self.window_position = Some(position);
+        }
+
+    }
+
+    fn on_exit(&mut self) {
         let state = self.state.blocking_read();
         let window_position: Option<Pos2> = self.window_position;
         let (window_position_x, window_position_y) = match window_position {
@@ -324,8 +336,8 @@ impl eframe::App for GUIData {
     }
 }
 
-fn does_image_exist(ctx: &egui::Context, source: &str) -> TextureLoadResult {
-    ctx.try_load_texture(source, TextureOptions::default(), SizeHint::Width(50))
+fn does_image_exist(ui: &Ui, source: &str) -> TextureLoadResult {
+    ui.try_load_texture(source, TextureOptions::default(), SizeHint::Width(50))
 }
 
 fn get_image_size(texture: TexturePoll) -> Option<egui::Vec2> {

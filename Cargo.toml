@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-eframe = "0.33.3"
-egui_extras = { version = "0.33.3", features = ["image", "http"] }
+eframe = "0.34.3"
+egui_extras = { version = "0.34.3", features = ["image", "http"] }
 image = { version = "0.25.9", features = ["png", "jpeg"] }
 
 tokio = { version = "1.49.0", features = ["full"]}
