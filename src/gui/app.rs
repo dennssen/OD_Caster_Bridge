@@ -124,10 +124,6 @@ impl eframe::App for GUIData {
                             egui::TextStyle::Body,
                             egui::FontId::new(10.0, egui::FontFamily::Proportional)
                         );
-
-                        if ui.button("Settings").clicked() {
-                            self.settings = true;
-                        }
                     });
 
                     ui.collapsing("Match Data", |ui| {
