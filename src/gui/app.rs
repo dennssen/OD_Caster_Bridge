@@ -1,20 +1,27 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use eframe::{egui, Frame};
 use eframe::egui::{Id, Pos2, RichText, SizeHint, TextureOptions, Ui, ViewportBuilder, ViewportId};
 use eframe::egui::load::{TextureLoadResult, TexturePoll};
 use indexmap::IndexMap;
+use reqwest::Client;
+use serde::Serialize;
 use crate::gui::widgets;
 use crate::http::logos::{get_and_upload_logo, Team};
 use crate::managers::appdata::AppData;
-use crate::managers::rounds::{RoundManager, RoundOverride};
-use crate::ws::state::{GameState, Round};
+use crate::ws::state::{CameraApiUpdate, GameState, Round};
+
+static CLIENT: OnceLock<Client> = OnceLock::new();
 
 enum RoundAction {
-    Create,
-    Override(usize, Round),
+    Update(),
     Delete(usize),
     None
+}
+
+#[derive(Serialize)]
+struct UpdatedCameraApi {
+    api: CameraApiUpdate
 }
 
 pub struct AppState {
@@ -22,7 +29,6 @@ pub struct AppState {
     pub subscribed_gamemode_slot_id: String,
     pub camera_api_id: String,
 
-    pub round_manager: RoundManager,
     pub selected_round: Option<usize>,
 
     pub connected_clients: usize,
@@ -38,14 +44,41 @@ pub struct GUIData {
     state: Arc<RwLock<AppState>>,
     window_position: Option<Pos2>,
     first_frame: bool,
+    rt_handle: tokio::runtime::Handle,
 }
 
 impl GUIData {
-    pub(crate) fn new(state: Arc<RwLock<AppState>>) -> Self {
+    fn client() -> &'static Client {
+        CLIENT.get_or_init(Client::new)
+    }
+
+    fn post_updated_rounds(&self, rounds: IndexMap<usize, Round>) {
+        let state = self.state.clone();
+        self.rt_handle.spawn(async move {
+            let client = Self::client();
+            let state = state.read().await;
+
+            let json: UpdatedCameraApi = UpdatedCameraApi {
+                api: CameraApiUpdate {
+                    rounds: Some(rounds),
+                    ..Default::default()
+                }
+            };
+
+            let _ = client
+                .post(format!("http://localhost:5420/cameras/{}/config", state.camera_api_id))
+                .json(&json)
+                .send()
+                .await;
+        });
+    }
+
+    pub(crate) fn new(state: Arc<RwLock<AppState>>, handle: tokio::runtime::Handle) -> Self {
         Self {
             state,
             window_position: None,
             first_frame: true,
+            rt_handle: handle
         }
     }
 }
@@ -221,14 +254,15 @@ impl eframe::App for GUIData {
                             });
 
                             ui.collapsing("Rounds", |ui| {
-                                let rounds_amount: usize = state.round_manager.get_total_rounds_amount();
-                                let rounds: &IndexMap<usize, Round> = &state.round_manager.update_rounds();
+                                let AppState { game_state, selected_round, ..} = &mut *state;
+                                if let Some(camera_api) = &game_state.camera_api {
+                                    ui.add(widgets::RoundsPicker::new(&camera_api.rounds, selected_round));
+                                }
 
-                                ui.add(widgets::RoundsPicker::new(rounds, &mut state.selected_round, rounds_amount));
+                                if let Some(camera_api) = &mut game_state.camera_api {
+                                    let rounds: &mut IndexMap<usize, Round> = &mut camera_api.rounds;
 
-                                let round_action: RoundAction = if let Some(selected_round) = &state.selected_round {
-                                    if let Some(round) = rounds.get(selected_round) {
-                                        let mut round = round.clone();
+                                    let round_action: Option<RoundAction> = selected_round.and_then(|i| rounds.get_mut(&i).map(|selected_round| {
                                         let mut changed: bool = false;
                                         let mut should_delete: bool = false;
 
@@ -236,7 +270,7 @@ impl eframe::App for GUIData {
                                         ui.horizontal(|ui| {
                                             ui.vertical(|ui| {
                                                 ui.label("Home");
-                                                if ui.add(egui::DragValue::new(&mut round.home).suffix(" score")).changed() {
+                                                if ui.add(egui::DragValue::new(&mut selected_round.home).suffix(" score")).changed() {
                                                     changed = true;
                                                 }
                                             });
@@ -245,7 +279,7 @@ impl eframe::App for GUIData {
 
                                             ui.vertical(|ui| {
                                                 ui.label("Away");
-                                                if ui.add(egui::DragValue::new(&mut round.away).suffix(" score")).changed() {
+                                                if ui.add(egui::DragValue::new(&mut selected_round.away).suffix(" score")).changed() {
                                                     changed = true;
                                                 }
                                             });
@@ -257,35 +291,41 @@ impl eframe::App for GUIData {
                                             }
                                         });
 
-                                        if should_delete {
-                                            RoundAction::Delete(*selected_round)
-                                        } else if changed {
-                                            RoundAction::Override(*selected_round, Round {home: round.home, away: round.away})
+                                        if changed {
+                                            RoundAction::Update()
+                                        } else if should_delete {
+                                            RoundAction::Delete(i)
                                         } else {
                                             RoundAction::None
                                         }
-                                    } else {
-                                        println!("{} | {:?}", selected_round, rounds.keys().collect::<Vec<_>>());
-                                        RoundAction::Create
-                                    }
-                                } else {
-                                    RoundAction::None
-                                };
+                                    }));
 
-                                match round_action {
-                                    RoundAction::Create => {
-                                        println!("Created new round");
-                                        state.round_manager.add_round(Round::default());
+                                    match round_action {
+                                        None => {
+                                            if let Some(selected_round_index) = selected_round {
+                                                rounds.insert(*selected_round_index, Round::default());
+                                                self.post_updated_rounds(rounds.clone());
+                                            }
+                                        }
+                                        Some(action) => {
+                                            match action {
+                                                RoundAction::Update() => {
+                                                    self.post_updated_rounds(rounds.clone());
+                                                }
+                                                RoundAction::Delete(index) => {
+                                                    rounds.shift_remove(&index);
 
+                                                    self.post_updated_rounds(rounds.clone());
+                                                    if index > 0 {
+                                                        state.selected_round = Some(selected_round.unwrap_or(1) - 1);
+                                                    } else {
+                                                        state.selected_round = None;
+                                                    }
+                                                }
+                                                RoundAction::None => {}
+                                            }
+                                        }
                                     }
-                                    RoundAction::Override(round_index, round) => {
-                                        state.round_manager.add_override(round_index, RoundOverride::Replace(round));
-                                    }
-                                    RoundAction::Delete(round_index) => {
-                                        state.selected_round = None;
-                                        state.round_manager.add_override(round_index, RoundOverride::Delete);
-                                    }
-                                    RoundAction::None => {}
                                 }
                             });
                         });

@@ -319,6 +319,43 @@ impl Default for CameraApi {
     }
 }
 
+#[derive(Clone, Default, Deserialize, Serialize)]
+pub struct CameraApiUpdate {
+    #[serde(rename = "gamemodeId", skip_serializing_if = "Option::is_none")]
+    pub gamemode_id: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub home: Option<OverlayTeam>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub away: Option<OverlayTeam>,
+
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialize_rounds_opt",
+        default
+    )]
+    pub rounds: Option<IndexMap<usize, Round>>,
+
+    #[serde(rename = "followedPlayer", skip_serializing_if = "Option::is_none")]
+    pub followed_player: Option<String>,
+
+    #[serde(rename = "lastShotInfo", skip_serializing_if = "Option::is_none")]
+    pub last_shot_info: Option<ShotInfo>,
+
+    #[serde(rename = "isGracePeriod", skip_serializing_if = "Option::is_none")]
+    pub is_grace_period: Option<bool>,
+
+    #[serde(rename = "isOvertime", skip_serializing_if = "Option::is_none")]
+    pub is_overtime: Option<bool>,
+
+    #[serde(rename = "bestOf", skip_serializing_if = "Option::is_none")]
+    pub best_of: Option<i32>,
+
+    #[serde(rename = "matchLengthSeconds", skip_serializing_if = "Option::is_none")]
+    pub match_length_seconds: Option<i32>,
+}
+
 fn deserialize_rounds<'de, D>(deserializer: D) -> Result<IndexMap<usize, Round>, D::Error>
 where
     D: Deserializer<'de>,
@@ -333,6 +370,19 @@ where
 {
     let items: Vec<&Round> = map.values().collect();
     items.serialize(serializer)
+}
+
+fn serialize_rounds_opt<S>(
+    rounds: &Option<IndexMap<usize, Round>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match rounds {
+        Some(r) => serialize_rounds(r, serializer),
+        None => unreachable!(), // skip_serializing_if handles this case
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
