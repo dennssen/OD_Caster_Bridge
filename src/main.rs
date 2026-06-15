@@ -14,7 +14,6 @@ use egui_extras::install_image_loaders;
 use crate::ws::{server, api};
 use crate::gui::app::{GUIData, AppState};
 use crate::managers::appdata::AppData;
-use crate::managers::rounds::RoundManager;
 use crate::ws::state::{CameraApi, CasterTeams, GameState, GamemodeData, MatchData};
 
 fn main() -> eframe::Result {
@@ -52,8 +51,7 @@ fn main() -> eframe::Result {
         },
         subscribed_gamemode_slot_id: String::new(),
         camera_api_id: app_data.camera_api_id,
-        
-        round_manager: RoundManager::new(),
+
         selected_round: None,
         
         connected_clients: 0,
@@ -85,6 +83,13 @@ fn main() -> eframe::Result {
         http::server::handle_http();
     });
 
+    let post_rt = tokio::runtime::Runtime::new().unwrap();
+    let post_handle = post_rt.handle().clone();
+
+    std::thread::spawn(move || {
+        post_rt.block_on(std::future::pending::<()>());
+    });
+
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([340.0, 780.0])
         .with_resizable(false)
@@ -107,7 +112,7 @@ fn main() -> eframe::Result {
                 style.spacing.item_spacing.x = 2.0;
             });
             install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(GUIData::new(state)))
+            Ok(Box::new(GUIData::new(state, post_handle)))
         }),
     )
 }
