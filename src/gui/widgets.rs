@@ -89,6 +89,7 @@ impl<'t> egui::Widget for TinyTextEdit<'t> {
             ui.add(
                 egui::TextEdit::singleline(self.text)
                     .desired_width(self.width.unwrap_or_else(|| 135.0))
+                    .font(egui::FontId::new(10.0, egui::FontFamily::Proportional))
             );
             ui.label(self.label);
         }).response
