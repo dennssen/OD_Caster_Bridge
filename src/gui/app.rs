@@ -255,9 +255,7 @@ impl eframe::App for GUIData {
 
                             ui.collapsing("Rounds", |ui| {
                                 let AppState { game_state, selected_round, ..} = &mut *state;
-                                if let Some(camera_api) = &game_state.camera_api {
-                                    ui.add(widgets::RoundsPicker::new(&camera_api.rounds, selected_round));
-                                }
+                                ui.add(widgets::RoundsPicker::new(game_state.camera_api.as_ref().map(|c| &c.rounds), selected_round));
 
                                 if let Some(camera_api) = &mut game_state.camera_api {
                                     let rounds: &mut IndexMap<usize, Round> = &mut camera_api.rounds;

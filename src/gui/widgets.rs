@@ -1,5 +1,5 @@
 use eframe::egui;
-use eframe::egui::{Response, TextBuffer, Ui};
+use eframe::egui::{Response, RichText, TextBuffer, Ui};
 use indexmap::IndexMap;
 use crate::ws::state::Round;
 
@@ -139,12 +139,12 @@ impl<'v> egui::Widget for PlayerList {
 }
 
 pub struct RoundsPicker<'v> {
-    rounds: &'v IndexMap<usize, Round>,
+    rounds: Option<&'v IndexMap<usize, Round>>,
     selected_value: &'v mut Option<usize>
 }
 
 impl<'v> RoundsPicker<'v> {
-    pub fn new(rounds: &'v IndexMap<usize, Round>, selected_value: &'v mut Option<usize>) -> Self {
+    pub fn new(rounds: Option<&'v IndexMap<usize, Round>>, selected_value: &'v mut Option<usize>) -> Self {
         Self {
             rounds,
             selected_value
@@ -159,23 +159,34 @@ impl<'v> egui::Widget for RoundsPicker<'v> {
             .inner_margin(4.0)
             .show(ui, |ui| {
                 ui.vertical(|ui| {
-                    for (i, k) in self.rounds.keys().enumerate() {
-                        if i > 0 {
-                            ui.separator();
-                        }
+                    if let Some(rounds) = self.rounds {
+                        for (i, k) in rounds.keys().enumerate() {
+                            if i > 0 {
+                                ui.separator();
+                            }
 
-                        if ui.add_sized(
-                            [ui.available_width(), 0.0],
-                            egui::Button::selectable(self.selected_value.is_some() && self.selected_value.unwrap() == *k, format!("round {}", i+1))
-                        ).clicked() {
-                            *self.selected_value = Some(*k)
+                            if ui.add_sized(
+                                [ui.available_width(), 0.0],
+                                egui::Button::selectable(self.selected_value.is_some() && self.selected_value.unwrap() == *k, format!("round {}", i+1))
+                            ).clicked() {
+                                *self.selected_value = Some(*k)
+                            }
                         }
                     }
-                    if ui.add_sized(
-                        [ui.available_width(), 0.0],
-                        egui::Button::new("+")
-                    ).clicked() {
-                        *self.selected_value = Some(self.rounds.len())
+
+                    let new_round_button_response = ui.add_enabled_ui(self.rounds.is_some(), |ui| {
+                        ui.add_sized(
+                            [ui.available_width(), 0.0],
+                            egui::Button::new("+")
+                        )
+                    })
+                        .inner
+                        .on_disabled_hover_text(RichText::new("Cannot add rounds while spectator is closed").size(10.0));
+
+                    if new_round_button_response.clicked() {
+                        if let Some(rounds) = self.rounds {
+                            *self.selected_value = Some(rounds.len())
+                        }
                     }
                 });
             }).response
