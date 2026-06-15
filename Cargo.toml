@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 eframe = "0.34.3"
 egui_extras = { version = "0.34.3", features = ["image", "http"] }
+image = { version = "0.25.9", features = ["png", "jpeg"] }
 
 tokio = { version = "1.49.0", features = ["full"]}
 tokio-tungstenite = "0.28.0"
