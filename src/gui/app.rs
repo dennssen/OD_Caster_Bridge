@@ -289,7 +289,7 @@ impl eframe::App for GUIData {
                                             &mut state.odc_match_link
                                         ).with_desired_width(100.0));
                                         if state.odc_match_modal_state == ODCMatchModalState::Error {
-                                            ui.colored_label(Color32::RED, RichText::new("Bad link").size(20.0));
+                                            ui.colored_label(Color32::RED, RichText::new("Bad link").size(10.0));
                                         }
 
                                         ui.add_space(75.0);
