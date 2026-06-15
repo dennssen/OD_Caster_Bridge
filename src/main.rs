@@ -51,8 +51,10 @@ fn main() -> eframe::Result {
         },
         subscribed_gamemode_slot_id: String::new(),
         camera_api_id: app_data.camera_api_id,
+        odc_match_link: String::new(),
 
         selected_round: None,
+        show_odc_match_modal: false,
         
         connected_clients: 0,
         spectator_connection: false,

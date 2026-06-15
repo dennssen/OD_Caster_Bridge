@@ -1,7 +1,7 @@
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use eframe::{egui, Frame};
-use eframe::egui::{Id, Pos2, RichText, SizeHint, TextureOptions, Ui, ViewportBuilder, ViewportId};
+use eframe::egui::{Id, Margin, Modal, Pos2, RichText, SizeHint, Style, TextureOptions, Ui, ViewportBuilder, ViewportId};
 use eframe::egui::load::{TextureLoadResult, TexturePoll};
 use indexmap::IndexMap;
 use reqwest::Client;
@@ -28,8 +28,10 @@ pub struct AppState {
     pub game_state: GameState,
     pub subscribed_gamemode_slot_id: String,
     pub camera_api_id: String,
+    pub odc_match_link: String,
 
     pub selected_round: Option<usize>,
+    pub(crate) show_odc_match_modal: bool,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -169,6 +171,36 @@ impl eframe::App for GUIData {
                                 egui::TextStyle::Body,
                                 egui::FontId::new(10.0, egui::FontFamily::Proportional)
                             );
+
+                            if state.show_odc_match_modal {
+                                Modal::new(Id::new("ODC Match Modal"))
+                                    .show(ui,|ui| {
+                                        ui.label("Get data from ODC match");
+
+                                        ui.add_space(10.0);
+
+                                        ui.add(widgets::TinyTextEdit::single_line(
+                                            "Match Link",
+                                            &mut state.odc_match_link
+                                        ).with_desired_width(100.0));
+
+                                        ui.add_space(75.0);
+
+                                        ui.horizontal_centered(|ui| {
+                                            if ui.button("Get data").clicked() {
+                                                // Get data
+                                            }
+                                            if ui.button("Cancel").clicked() {
+                                                state.show_odc_match_modal = false;
+                                                state.odc_match_link = String::new();
+                                            }
+                                        });
+                                    });
+                            }
+
+                            if ui.button("ODC Match").clicked() {
+                                state.show_odc_match_modal = true;
+                            }
 
                             ui.add(widgets::TinyTextEdit::single_line(
                                 "Match Host",
