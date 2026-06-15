@@ -18,3 +18,4 @@ reqwest = { version = "0.13.1", features = ["json"] }
 indexmap = { version = "2.13.0", features = ["serde"] }
 dirs = "6.0.0"
 rfd = "0.17.2"
+regex = "1.12.4"
