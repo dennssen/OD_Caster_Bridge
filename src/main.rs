@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use eframe::egui;
 use egui_extras::install_image_loaders;
 use crate::ws::{server, api};
-use crate::gui::app::{GUIData, AppState};
+use crate::gui::app::{GUIData, AppState, ODCMatchModalState};
 use crate::managers::appdata::AppData;
 use crate::ws::state::{CameraApi, CasterTeams, GameState, GamemodeData, MatchData};
 
@@ -51,8 +51,10 @@ fn main() -> eframe::Result {
         },
         subscribed_gamemode_slot_id: String::new(),
         camera_api_id: app_data.camera_api_id,
+        odc_match_link: String::new(),
 
         selected_round: None,
+        odc_match_modal_state: ODCMatchModalState::Closed,
         
         connected_clients: 0,
         spectator_connection: false,

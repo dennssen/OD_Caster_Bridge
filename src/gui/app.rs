@@ -1,17 +1,19 @@
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use eframe::{egui, Frame};
-use eframe::egui::{Id, Pos2, RichText, SizeHint, TextureOptions, Ui, ViewportBuilder, ViewportId};
+use eframe::egui::{Color32, Id, Modal, Pos2, RichText, SizeHint, TextureOptions, Ui};
 use eframe::egui::load::{TextureLoadResult, TexturePoll};
 use indexmap::IndexMap;
-use reqwest::Client;
-use serde::Serialize;
+use reqwest::{Client, Response};
+use serde::{Deserialize, Serialize};
+use regex::Regex;
 use crate::gui::widgets;
 use crate::http::logos::{get_and_upload_logo, Team};
 use crate::managers::appdata::AppData;
 use crate::ws::state::{CameraApiUpdate, GameState, Round};
 
 static CLIENT: OnceLock<Client> = OnceLock::new();
+static ODC_API_PREFIX: &str = "https://oriondriftcompetitive.com/api/v1";
 
 enum RoundAction {
     Update(),
@@ -19,17 +21,45 @@ enum RoundAction {
     None
 }
 
+#[derive(PartialEq, PartialOrd)]
+pub enum ODCMatchModalState {
+    Closed,
+    Open,
+    Loading,
+    Success,
+    Error
+}
+
 #[derive(Serialize)]
 struct UpdatedCameraApi {
     api: CameraApiUpdate
+}
+
+#[derive(Deserialize)]
+struct MatchJson {
+    #[serde(rename = "team1Id")]
+    team1_id: String,
+    #[serde(rename = "team2Id")]
+    team2_id: String,
+    #[serde(rename = "weekNumber")]
+    week_number: i16,
+}
+
+#[derive(Deserialize)]
+struct TeamJson {
+    name: String,
+    #[serde(rename = "profilePicture")]
+    profile_picture: String,
 }
 
 pub struct AppState {
     pub game_state: GameState,
     pub subscribed_gamemode_slot_id: String,
     pub camera_api_id: String,
+    pub odc_match_link: String,
 
     pub selected_round: Option<usize>,
+    pub odc_match_modal_state: ODCMatchModalState,
 
     pub connected_clients: usize,
     pub spectator_connection: bool,
@@ -70,6 +100,83 @@ impl GUIData {
                 .json(&json)
                 .send()
                 .await;
+        });
+    }
+
+    async fn parse_response<T: serde::de::DeserializeOwned>(
+        req: reqwest::Result<Response>,
+    ) -> Result<T, String> {
+        match req {
+            Ok(resp) if resp.status().is_success() => {
+                resp.json::<T>().await.map_err(|e| e.to_string())
+            }
+            Ok(resp) => Err(format!("Bad status: {}", resp.status())),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    fn get_odc_match_data(&self) {
+        let state = self.state.clone();
+        self.rt_handle.spawn(async move {
+            let client = Self::client();
+            let mut state = state.write().await;
+            state.odc_match_modal_state = ODCMatchModalState::Loading;
+
+            let re = Regex::new(r"/matches/(?P<match_id>[a-f0-9]+).*?league=(?P<league_id>[a-f0-9]+)").unwrap();
+
+            let caps = re.captures(state.odc_match_link.as_str());
+
+            if caps.is_none() {
+                state.odc_match_modal_state = ODCMatchModalState::Error;
+                return;
+            }
+
+            let caps = caps.unwrap();
+            let match_id = &caps["match_id"];
+            let league_id = &caps["league_id"];
+
+            let match_request = client.get(format!("{}/leagues/{}/matches/{}", ODC_API_PREFIX, league_id, match_id)).send().await;
+
+            let match_response: Result<MatchJson, String> = Self::parse_response(match_request).await;
+
+            let (home_team, away_team, week_number) = match match_response {
+                Ok(json) => {
+                    let home_team_request = client.get(format!("{}/teams/{}", ODC_API_PREFIX, json.team1_id)).send().await;
+                    let away_team_request = client.get(format!("{}/teams/{}", ODC_API_PREFIX, json.team2_id)).send().await;
+
+                    let home_team: Result<TeamJson, String> = Self::parse_response(home_team_request).await;
+                    let away_team: Result<TeamJson, String> = Self::parse_response(away_team_request).await;
+
+                    (home_team, away_team, json.week_number)
+                }
+                Err(_) => {
+                    state.odc_match_modal_state = ODCMatchModalState::Error;
+                    return;
+                }
+            };
+
+            if home_team.is_err() {
+                state.odc_match_modal_state = ODCMatchModalState::Error;
+                return;
+            }
+
+            if away_team.is_err() {
+                state.odc_match_modal_state = ODCMatchModalState::Error;
+                return;
+            }
+
+            state.game_state.match_data.host = String::from("ODC");
+            state.game_state.match_data.stage = format!("Week {}", week_number);
+
+            let (home_team, away_team) = (home_team.unwrap(), away_team.unwrap());
+
+            state.game_state.caster_teams.home.name = home_team.name;
+            state.game_state.caster_teams.home.logo_url = home_team.profile_picture;
+
+            state.game_state.caster_teams.away.name = away_team.name;
+            state.game_state.caster_teams.away.logo_url = away_team.profile_picture;
+
+            state.odc_match_modal_state = ODCMatchModalState::Success;
         });
     }
 
@@ -169,6 +276,46 @@ impl eframe::App for GUIData {
                                 egui::TextStyle::Body,
                                 egui::FontId::new(10.0, egui::FontFamily::Proportional)
                             );
+
+                            if state.odc_match_modal_state > ODCMatchModalState::Closed {
+                                Modal::new(Id::new("ODC Match Modal"))
+                                    .show(ui,|ui| {
+                                        ui.label("Get data from ODC match");
+
+                                        ui.add_space(10.0);
+
+                                        ui.add(widgets::TinyTextEdit::single_line(
+                                            "Match Link",
+                                            &mut state.odc_match_link
+                                        ).with_desired_width(100.0));
+                                        if state.odc_match_modal_state == ODCMatchModalState::Error {
+                                            ui.colored_label(Color32::RED, RichText::new("Bad link").size(20.0));
+                                        }
+
+                                        ui.add_space(75.0);
+
+                                        ui.horizontal_centered(|ui| {
+                                            if state.odc_match_modal_state == ODCMatchModalState::Loading {
+                                                ui.spinner();
+                                            } else if ui.button("Get data").clicked() {
+                                                self.get_odc_match_data();
+                                            }
+                                            if ui.button("Cancel").clicked() {
+                                                state.odc_match_link = String::new();
+                                                state.odc_match_modal_state = ODCMatchModalState::Closed;
+                                            }
+                                        });
+
+                                        if state.odc_match_modal_state == ODCMatchModalState::Success {
+                                            state.odc_match_link = String::new();
+                                            state.odc_match_modal_state = ODCMatchModalState::Closed;
+                                        }
+                                    });
+                            }
+
+                            if ui.button("ODC Match").clicked() {
+                                state.odc_match_modal_state = ODCMatchModalState::Open;
+                            }
 
                             ui.add(widgets::TinyTextEdit::single_line(
                                 "Match Host",
