@@ -17,6 +17,17 @@ pub struct Quat {
     pub w: f32,
 }
 
+impl Quat {
+    fn identity() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Vec3 {
     pub x: f32,
@@ -24,10 +35,29 @@ pub struct Vec3 {
     pub z: f32,
 }
 
+impl Vec3 {
+    fn zero() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Transform {
     pub position: Vec3,
     pub rotation: Quat
+}
+
+impl Transform {
+    fn identity() -> Self {
+        Self {
+            position: Vec3::zero(),
+            rotation: Quat::identity(),
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -56,6 +86,15 @@ pub struct Spectator {
 pub struct Ball {
     pub transform: Transform,
     pub velocity: Vec3,
+}
+
+impl Default for Ball {
+    fn default() -> Self {
+        Self {
+            transform: Transform::identity(),
+            velocity: Vec3::zero(),
+        }
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -192,6 +231,23 @@ impl Default for Stats {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+pub struct OverlayPlayer {
+    pub stats: Stats,
+    pub velocity: Vec3,
+    pub transform: Transform
+}
+
+impl Default for OverlayPlayer {
+    fn default() -> Self {
+        Self {
+            stats: Stats::default(),
+            velocity: Vec3::zero(),
+            transform: Transform::identity(),
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct ShotInfo {
     pub shooter: String,
     pub assister: String,
@@ -232,7 +288,7 @@ impl Default for Round {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct OverlayTeam {
     #[serde(deserialize_with = "deserialize_players")]
-    pub players: IndexMap<String, Stats>,
+    pub players: IndexMap<String, OverlayPlayer>,
 }
 
 
@@ -240,10 +296,10 @@ impl OverlayTeam {
     pub fn home_team() -> Self {
         Self {
             players: IndexMap::from([
-                ("Player1".to_string(), Stats::default()),
-                ("Player2".to_string(), Stats::default()),
-                ("Player3".to_string(), Stats::default()),
-                ("Player4".to_string(), Stats::default()),
+                ("Player1".to_string(), OverlayPlayer::default()),
+                ("Player2".to_string(), OverlayPlayer::default()),
+                ("Player3".to_string(), OverlayPlayer::default()),
+                ("Player4".to_string(), OverlayPlayer::default()),
             ]),
         }
     }
@@ -251,23 +307,23 @@ impl OverlayTeam {
     pub fn away_team() -> Self {
         Self {
             players: IndexMap::from([
-                ("PlayerWithLongNameAsh".to_string(), Stats::default()),
-                ("Player6".to_string(), Stats::default()),
-                ("Player7".to_string(), Stats::default()),
-                ("Player8".to_string(), Stats::default()),
+                ("PlayerWithLongNameAsh".to_string(), OverlayPlayer::default()),
+                ("Player6".to_string(), OverlayPlayer::default()),
+                ("Player7".to_string(), OverlayPlayer::default()),
+                ("Player8".to_string(), OverlayPlayer::default()),
             ]),
         }
     }
 }
 
-fn deserialize_players<'de, D>(deserializer: D) -> Result<IndexMap<String, Stats>, D::Error>
+fn deserialize_players<'de, D>(deserializer: D) -> Result<IndexMap<String, OverlayPlayer>, D::Error>
 where
     D: Deserializer<'de>,
 {
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum PlayerOrArray {
-        Players(IndexMap<String, Stats>),
+        Players(IndexMap<String, OverlayPlayer>),
         EmptyArray(Vec<()>),
     }
 
@@ -283,6 +339,9 @@ pub struct CameraApi {
     pub gamemode_id: String,
     pub home: OverlayTeam,
     pub away: OverlayTeam,
+    #[serde(rename = "arenaSize")]
+    pub arena_size: Vec3,
+    pub ball: Ball,
     #[serde(
         deserialize_with = "deserialize_rounds",
         serialize_with = "serialize_rounds"
@@ -308,6 +367,8 @@ impl Default for CameraApi {
             gamemode_id: String::new(),
             home: OverlayTeam::home_team(),
             away: OverlayTeam::away_team(),
+            arena_size: Vec3::zero(),
+            ball: Ball::default(),
             rounds: IndexMap::new(),
             followed_player: String::new(),
             last_shot_info: ShotInfo::default(),

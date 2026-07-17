@@ -15,7 +15,7 @@ OD Caster Bridge bridges the gap between Orion Drift's game API and your broadca
 - **Template Overlay Included**: Get started quickly with this [template overlay](https://github.com/dennssen/OD-Overlay-Template) or use it as a learning resource for building your own
 
 ## Requirements
-- Orion Drift spectator with the [**Caster Camera**](https://github.com/dennssen/CasterCamera) script [(v2.3.0 or above)](https://github.com/dennssen/CasterCamera/releases/latest)
+- Orion Drift spectator with the [**Caster Camera**](https://github.com/dennssen/CasterCamera) script [(v2.6.2 or above)](https://github.com/dennssen/CasterCamera/releases/latest)
 - OBS Studio or similar broadcasting software
 
 > **Important**: OD Caster Bridge is only compatible with the Caster Camera spectator script. Ensure you have this script enabled while using the app.
@@ -33,7 +33,7 @@ If you're new to creating overlays, check out the [template overlay](https://git
 
 ## Migrating from the old method
 If you were previously using the old method of setting up overlays and want to switch to this new version follow these steps:
-1. Update the Caster Camera to version [v2.3.0 or above](https://github.com/dennssen/CasterCamera/releases/latest)
+1. Update the Caster Camera to version [v2.6.2 or above](https://github.com/dennssen/CasterCamera/releases/latest)
 2. Delete the `dennssen.overlayInfo.luau` script
 3. Delete the old `Overlay` folder gotten from the `OverlayWebsite` repo (Save your custom-made overlays if you have any)
 4. Install the new [template overlay](https://github.com/dennssen/OD-Overlay-Template) (Or update your custom-made overlays to work with the new api)
@@ -49,7 +49,7 @@ Until then, I recommend looking at the [template overlay](https://github.com/den
 I'm actively developing OD Caster Bridge with several exciting features planned:
 
 - [ ] **Overlay Hosting & Switching**: Host overlays directly through the app's HTTP server and switch between different overlays without manually changing URIs in OBS
-- [ ] **Manual Round Addition**: Add rounds manually in addition to the current delete and edit functionality
+- [X] **Manual Round Addition**: Add rounds manually in addition to the current delete and edit functionality
 - [ ] **Configurable Keybinds**: Quick actions like increasing/decreasing scores on previous rounds, and more
 - [ ] **OBS WebSocket Integration**: Automatic scene switching and source control triggered by in-game events like goals scored and round transitions
 
