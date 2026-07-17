@@ -339,6 +339,8 @@ pub struct CameraApi {
     pub gamemode_id: String,
     pub home: OverlayTeam,
     pub away: OverlayTeam,
+    #[serde(rename = "arenaSize")]
+    pub arena_size: Vec3,
     pub ball: Ball,
     #[serde(
         deserialize_with = "deserialize_rounds",
@@ -365,6 +367,7 @@ impl Default for CameraApi {
             gamemode_id: String::new(),
             home: OverlayTeam::home_team(),
             away: OverlayTeam::away_team(),
+            arena_size: Vec3::zero(),
             ball: Ball::default(),
             rounds: IndexMap::new(),
             followed_player: String::new(),
