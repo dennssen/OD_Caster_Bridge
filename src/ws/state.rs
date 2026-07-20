@@ -333,6 +333,54 @@ where
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PlayerPossessionStats {
+    pub name: String,
+    pub seconds: f64,
+}
+
+impl Default for PlayerPossessionStats {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            seconds: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PossessionSeconds {
+    pub home: f64,
+    pub away: f64,
+    pub loose: f64,
+}
+
+impl Default for PossessionSeconds {
+    fn default() -> Self {
+        Self {
+            home: 0.0,
+            away: 0.0,
+            loose: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PossessionData {
+    pub possession_seconds: PossessionSeconds,
+    pub possession_seconds_by_player: Vec<PlayerPossessionStats>,
+}
+
+impl Default for PossessionData {
+    fn default() -> Self {
+        Self {
+            possession_seconds: PossessionSeconds::default(),
+            possession_seconds_by_player: Vec::new(),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct CameraApi {
     #[serde(rename = "gamemodeId")]
@@ -359,6 +407,7 @@ pub struct CameraApi {
     pub best_of: i32,
     #[serde(rename = "matchLengthSeconds")]
     pub match_length_seconds: i32,
+    pub possession: PossessionData,
 }
 
 impl Default for CameraApi {
@@ -375,7 +424,8 @@ impl Default for CameraApi {
             is_grace_period: false,
             is_overtime: false,
             best_of: 3,
-            match_length_seconds: 300
+            match_length_seconds: 300,
+            possession: PossessionData::default()
         }
     }
 }
@@ -415,6 +465,9 @@ pub struct CameraApiUpdate {
 
     #[serde(rename = "matchLengthSeconds", skip_serializing_if = "Option::is_none")]
     pub match_length_seconds: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub possession: Option<PossessionData>,
 }
 
 fn deserialize_rounds<'de, D>(deserializer: D) -> Result<IndexMap<usize, Round>, D::Error>
