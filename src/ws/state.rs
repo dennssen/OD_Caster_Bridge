@@ -218,6 +218,7 @@ pub struct Stats {
     pub goals: i32,
     pub saves: i32,
     pub assists: i32,
+    pub possession: f32,
 }
 
 impl Default for Stats {
@@ -225,7 +226,8 @@ impl Default for Stats {
         Self {
             goals: 0,
             saves: 0,
-            assists: 0
+            assists: 0,
+            possession: 0.0
         }
     }
 }
@@ -289,6 +291,7 @@ impl Default for Round {
 pub struct OverlayTeam {
     #[serde(deserialize_with = "deserialize_players")]
     pub players: IndexMap<String, OverlayPlayer>,
+    pub possession: f32,
 }
 
 
@@ -301,6 +304,7 @@ impl OverlayTeam {
                 ("Player3".to_string(), OverlayPlayer::default()),
                 ("Player4".to_string(), OverlayPlayer::default()),
             ]),
+            possession: 0.0,
         }
     }
 
@@ -312,6 +316,7 @@ impl OverlayTeam {
                 ("Player7".to_string(), OverlayPlayer::default()),
                 ("Player8".to_string(), OverlayPlayer::default()),
             ]),
+            possession: 0.0,
         }
     }
 }
