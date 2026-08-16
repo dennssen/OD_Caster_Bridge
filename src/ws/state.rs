@@ -209,7 +209,11 @@ pub struct Stats {
     pub goals: i32,
     pub saves: i32,
     pub assists: i32,
+    pub shots: i32,
+    pub passes: i32,
     pub possession: f32,
+    pub possessions_won: i32,
+    pub possessions_lost: i32,
     pub dribble_meters: f32,
 }
 
@@ -219,7 +223,12 @@ impl Default for Stats {
             goals: 0,
             saves: 0,
             assists: 0,
-            possession: 0.0
+            shots: 0,
+            passes: 0,
+            possession: 0.0,
+            possessions_won: 0,
+            possessions_lost: 0,
+            dribble_meters: 0.0,
         }
     }
 }
@@ -228,7 +237,8 @@ impl Default for Stats {
 pub struct OverlayPlayer {
     pub stats: Stats,
     pub velocity: Vec3,
-    pub transform: Transform
+    pub transform: Transform,
+    pub boost: f32,
 }
 
 impl Default for OverlayPlayer {
@@ -237,6 +247,7 @@ impl Default for OverlayPlayer {
             stats: Stats::default(),
             velocity: Vec3::zero(),
             transform: Transform::identity(),
+            boost: 0.0,
         }
     }
 }
