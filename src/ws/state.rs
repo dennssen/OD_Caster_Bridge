@@ -61,22 +61,19 @@ impl Transform {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Player {
-    #[serde(rename = "playerId")]
     pub player_id: u16,
-    #[serde(rename = "playerName")]
     pub player_name: String,
     pub head: Transform,
     pub velocity: Vec3,
-    #[serde(rename = "teamIndex")]
     pub team_index: i8,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Spectator {
-    #[serde(rename = "playerId")]
     pub player_id: u16,
-    #[serde(rename = "playerName")]
     pub player_name: String,
     pub ping: u16,
     pub transform: Transform,
@@ -105,18 +102,17 @@ pub struct GameData {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SimpleGamemode {
-    #[serde(rename = "slotId")]
     pub slot_id: String,
     pub position: Vec3,
     pub rotation: Quat,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SimplePlayer {
-    #[serde(rename = "playerId")]
     pub player_id: u16,
-    #[serde(rename = "playerName")]
     pub player_name: String,
     pub position: Vec3,
 }
@@ -128,12 +124,11 @@ pub struct TeamColor {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GamemodeTeam {
     pub score: i8,
-    #[serde(rename = "roundsWon")]
     pub rounds_won: i16,
     pub players: Vec<SimplePlayer>,
-    #[serde(rename = "teamColor")]
     pub team_color: TeamColor,
 }
 
@@ -183,18 +178,13 @@ impl GamemodeTeam {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GamemodeData {
-    #[serde(rename = "slotId")]
     pub slot_id: String,
-    #[serde(rename = "timeSeconds")]
     pub time_seconds: f32,
-    #[serde(rename = "secondaryTimeSeconds")]
     pub secondary_time_seconds: f32,
-    #[serde(rename = "isGameRunning")]
     pub is_game_running: bool,
-    #[serde(rename = "totalRounds")]
     pub total_rounds: i8,
-    #[serde(rename = "useBestOf")]
     pub use_best_of: bool,
     pub teams: Vec<GamemodeTeam>,
 }
@@ -214,11 +204,13 @@ impl Default for GamemodeData {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Stats {
     pub goals: i32,
     pub saves: i32,
     pub assists: i32,
     pub possession: f32,
+    pub dribble_meters: f32,
 }
 
 impl Default for Stats {
@@ -250,13 +242,12 @@ impl Default for OverlayPlayer {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ShotInfo {
     pub shooter: String,
     pub assister: String,
     pub team: i32,
-    #[serde(rename = "shotSpeed")]
     pub shot_speed: f64,
-    #[serde(rename = "shotDistanceMeters")]
     pub shot_distance_meters: f64,
 }
 
@@ -339,12 +330,11 @@ where
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CameraApi {
-    #[serde(rename = "gamemodeId")]
     pub gamemode_id: String,
     pub home: OverlayTeam,
     pub away: OverlayTeam,
-    #[serde(rename = "arenaSize")]
     pub arena_size: Vec3,
     pub ball: Ball,
     #[serde(
@@ -352,17 +342,11 @@ pub struct CameraApi {
         serialize_with = "serialize_rounds"
     )]
     pub rounds: IndexMap<usize, Round>,
-    #[serde(rename = "followedPlayer")]
     pub followed_player: String,
-    #[serde(rename = "lastShotInfo")]
     pub last_shot_info: ShotInfo,
-    #[serde(rename = "isGracePeriod")]
     pub is_grace_period: bool,
-    #[serde(rename = "isOvertime")]
     pub is_overtime: bool,
-    #[serde(rename = "bestOf")]
     pub best_of: i32,
-    #[serde(rename = "matchLengthSeconds")]
     pub match_length_seconds: i32,
 }
 
@@ -386,39 +370,24 @@ impl Default for CameraApi {
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CameraApiUpdate {
-    #[serde(rename = "gamemodeId", skip_serializing_if = "Option::is_none")]
     pub gamemode_id: Option<String>,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub home: Option<OverlayTeam>,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub away: Option<OverlayTeam>,
-
     #[serde(
         skip_serializing_if = "Option::is_none",
         serialize_with = "serialize_rounds_opt",
         default
     )]
     pub rounds: Option<IndexMap<usize, Round>>,
-
-    #[serde(rename = "followedPlayer", skip_serializing_if = "Option::is_none")]
     pub followed_player: Option<String>,
-
-    #[serde(rename = "lastShotInfo", skip_serializing_if = "Option::is_none")]
     pub last_shot_info: Option<ShotInfo>,
-
-    #[serde(rename = "isGracePeriod", skip_serializing_if = "Option::is_none")]
     pub is_grace_period: Option<bool>,
-
-    #[serde(rename = "isOvertime", skip_serializing_if = "Option::is_none")]
     pub is_overtime: Option<bool>,
-
-    #[serde(rename = "bestOf", skip_serializing_if = "Option::is_none")]
     pub best_of: Option<i32>,
-
-    #[serde(rename = "matchLengthSeconds", skip_serializing_if = "Option::is_none")]
     pub match_length_seconds: Option<i32>,
 }
 
@@ -452,9 +421,9 @@ where
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CasterTeam {
     pub name: String,
-    #[serde(rename = "logoUrl")]
     pub logo_url: String,
 }
 
@@ -500,17 +469,13 @@ impl Default for MatchData {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GameState {
-    #[serde(rename = "gameData")]
     pub game_data: Option<GameData>,
     pub gamemodes: Vec<SimpleGamemode>,
-    #[serde(rename = "selectedGamemode")]
     pub selected_gamemode: Option<GamemodeData>,
     pub cameras: Vec<String>,
-    #[serde(rename = "cameraApi")]
     pub camera_api: Option<CameraApi>,
-    #[serde(rename = "casterTeams")]
     pub caster_teams: CasterTeams,
-    #[serde(rename = "matchData")]
     pub match_data: MatchData,
 }
